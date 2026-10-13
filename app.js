@@ -365,8 +365,12 @@ function App() {
       avg: avg.toFixed(2),
       rawAvg: avg,
       ratingsCount: explicitCount,
-      variance: variance.toFixed(2),
+      variance: parseFloat(variance.toFixed(2)),
       highScorers,
+      scoresMap: users.reduce(
+        (acc, u, idx) => ({ ...acc, [u]: scores[idx] }),
+        {},
+      ),
     };
   });
 
@@ -374,18 +378,20 @@ function App() {
 
   // Compute Category & State Aggregates
   const categoriesList = ['Radar', 'Regional', 'Metro D'];
-  const categoryStats = categoriesList.map((cat) => {
-    const items = towerMetrics.filter((m) => m.category === cat);
-    const totalAvg =
-      items.reduce((sum, item) => sum + item.rawAvg, 0) / (items.length || 1);
-    const topTower = [...items].sort((a, b) => b.rawAvg - a.rawAvg)[0];
-    return {
-      category: cat,
-      count: items.length,
-      avg: totalAvg.toFixed(2),
-      topTower: topTower ? topTower.tower : 'N/A',
-    };
-  });
+  const categoryStats = categoriesList
+    .map((cat) => {
+      const items = towerMetrics.filter((m) => m.category === cat);
+      const totalAvg =
+        items.reduce((sum, item) => sum + item.rawAvg, 0) / (items.length || 1);
+      const topTower = [...items].sort((a, b) => b.rawAvg - a.rawAvg)[0];
+      return {
+        category: cat,
+        count: items.length,
+        avg: totalAvg.toFixed(2),
+        topTower: topTower ? topTower.tower : 'N/A',
+      };
+    })
+    .sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg));
 
   const statesList = ['NSW', 'QLD', 'VIC', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
   const stateStats = statesList
@@ -407,6 +413,30 @@ function App() {
       };
     })
     .sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg));
+
+  // Trivia Insights Derivation
+  const mostPolarized = [...towerMetrics].sort(
+    (a, b) => b.variance - a.variance,
+  )[0];
+  const crowdPleaser = [...towerMetrics].sort((a, b) => b.rawAvg - a.rawAvg)[0];
+  const avoidanceZone = [...towerMetrics].sort(
+    (a, b) => a.rawAvg - b.rawAvg,
+  )[0];
+
+  const secretAdmirerItem = towerMetrics.find((m) => {
+    const scores = Object.values(m.scoresMap);
+    const fivers = scores.filter((s) => s === 5).length;
+    const lowOrMids = scores.filter((s) => s > 0 && s <= 3).length;
+    return fivers === 1 && lowOrMids >= 4;
+  });
+
+  const highAgreementItem = [...towerMetrics]
+    .filter((m) => m.ratingsCount >= 3)
+    .sort((a, b) => a.variance - b.variance)[0];
+
+  // Top Category & Top State
+  const topCat = categoryStats[0];
+  const topSt = stateStats[0];
 
   // Optimal Draft Permutation Engine
   const runOptimalDraft = () => {
@@ -496,7 +526,7 @@ function App() {
   });
 
   return (
-    <div className='max-w-7xl mx-auto p-4 md:p-8 font-sans text-slate-100 antialiased relative min-h-screen bg-slate-950'>
+    <div className='max-w-7xl mx-auto p-4 md:p-8 font-sans text-slate-100 antialiased relative min-h-screen bg-slate-950 flex flex-col'>
       {/* Icon-Only Saving Status Bottom-Right Toast */}
       <div
         aria-live='polite'
@@ -649,13 +679,13 @@ function App() {
             aria-selected={activeTab === 'rate'}
             aria-controls='panel-rate'
             onClick={() => setActiveTab('rate')}
-            className={`flex-1 min-w-[150px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
               activeTab === 'rate'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
             }`}
           >
-            <span>🎯 Rate Towers</span>
+            <span>🎯 Rate Tower</span>
             <span
               className={`text-[10px] font-mono px-2 py-0.5 rounded-md ${activeTab === 'rate' ? 'bg-sky-700 text-sky-100' : 'bg-slate-800 text-slate-400'}`}
             >
@@ -668,13 +698,13 @@ function App() {
             aria-selected={activeTab === 'draft'}
             aria-controls='panel-draft'
             onClick={() => setActiveTab('draft')}
-            className={`flex-1 min-w-[150px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
               activeTab === 'draft'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
             }`}
           >
-            ⚡ Target Draft
+            ⚡ Draft Pick
           </button>
           <button
             role='tab'
@@ -682,7 +712,7 @@ function App() {
             aria-selected={activeTab === 'hot-to-not'}
             aria-controls='panel-hot-to-not'
             onClick={() => setActiveTab('hot-to-not')}
-            className={`flex-1 min-w-[150px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
               activeTab === 'hot-to-not'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
@@ -692,17 +722,17 @@ function App() {
           </button>
           <button
             role='tab'
-            id='tab-rivalry'
-            aria-selected={activeTab === 'rivalry'}
-            aria-controls='panel-rivalry'
-            onClick={() => setActiveTab('rivalry')}
-            className={`flex-1 min-w-[150px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
-              activeTab === 'rivalry'
+            id='tab-trivia'
+            aria-selected={activeTab === 'trivia'}
+            aria-controls='panel-trivia'
+            onClick={() => setActiveTab('trivia')}
+            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+              activeTab === 'trivia'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
             }`}
           >
-            ⚔️ Head to Head
+            💡 Team Trivia
           </button>
           <button
             role='tab'
@@ -710,13 +740,13 @@ function App() {
             aria-selected={activeTab === 'breakdown'}
             aria-controls='panel-breakdown'
             onClick={() => setActiveTab('breakdown')}
-            className={`flex-1 min-w-[150px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
               activeTab === 'breakdown'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
             }`}
           >
-            📊 Best to Rest
+            📊 Category Stats
           </button>
         </div>
       </nav>
@@ -727,9 +757,10 @@ function App() {
           id='panel-rate'
           role='tabpanel'
           aria-labelledby='tab-rate'
-          className='space-y-6'
+          className='space-y-6 flex-1'
         >
-          <div className='flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900/80 backdrop-blur-xl p-4 md:p-5 rounded-3xl border border-slate-800/80 shadow-xl'>
+          {/* Sticky Filter & Search Bar */}
+          <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl p-4 md:p-5 rounded-3xl border border-slate-800 shadow-2xl flex flex-col sm:flex-row justify-between items-center gap-4'>
             <div
               className='flex flex-wrap gap-2'
               role='group'
@@ -858,7 +889,7 @@ function App() {
           id='panel-draft'
           role='tabpanel'
           aria-labelledby='tab-draft'
-          className='space-y-6'
+          className='space-y-6 flex-1'
         >
           <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
             <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6'>
@@ -939,11 +970,26 @@ function App() {
                   <h3 className='text-xl font-bold text-slate-100'>
                     Optimal Placement Results
                   </h3>
+                  {/* Sticky Option Selector for Tied Combinations */}
                   {draftResult.options.length > 1 && (
-                    <p className='text-xs text-amber-300 font-semibold mt-1'>
-                      ⚡ Tie Detected: {draftResult.options.length} different
-                      combinations yield the exact same highest team score!
-                    </p>
+                    <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-800 flex items-center gap-2 overflow-x-auto shadow-2xl'>
+                      <span className='text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap'>
+                        View Tied Option:
+                      </span>
+                      {draftResult.options.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedOptionIdx(idx)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition duration-150 ${
+                            selectedOptionIdx === idx
+                              ? 'bg-sky-600 text-white shadow-md'
+                              : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
+                          }`}
+                        >
+                          Option #{idx + 1}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div className='text-right'>
@@ -956,9 +1002,9 @@ function App() {
                 </div>
               </div>
 
-              {/* Option Selector for Tied Combinations */}
+              {/* Sticky Option Selector for Tied Combinations */}
               {draftResult.options.length > 1 && (
-                <div className='flex items-center gap-2 overflow-x-auto pb-2'>
+                <div className='sticky top-0 z-20 bg-slate-900/95 backdrop-blur-xl p-3 rounded-2xl border border-slate-800 flex items-center gap-2 overflow-x-auto shadow-xl'>
                   <span className='text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap'>
                     View Tied Option:
                   </span>
@@ -1032,8 +1078,8 @@ function App() {
                 </h4>
                 <p className='text-xs text-slate-400 mb-4'>
                   How each controller should rank the 6 target towers on their
-                  individual preference submission forms based on their rated
-                  scores:
+                  individual preference submission forms to lock in this optimal
+                  team outcome:
                 </p>
 
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
@@ -1043,29 +1089,20 @@ function App() {
                     const assignedTowerName =
                       currentOptionAssignments[u]?.tower;
 
-                    // Rank the 6 target slots with Strategic Fallback Optimization
                     const rankedTargets = targetSlots
                       .map((tower) => ({
                         tower,
                         score: getScore(u, tower),
                         isAssigned: tower === assignedTowerName,
-                        competitionScore: towerDemand[tower], // Total team score demand
+                        competitionScore: towerDemand[tower],
                         meta: TOWER_METADATA[tower],
                       }))
                       .sort((a, b) => {
-                        // 1. Primary: Personal explicit rating score (5/5 beats 4/5)
-                        if (b.score !== a.score) return b.score - a.score;
-
-                        // 2. Secondary: Force the assigned draft tower to #1 within its score bracket
                         if (a.isAssigned !== b.isAssigned)
                           return a.isAssigned ? -1 : 1;
-
-                        // 3. Fallback Optimization: If scores tie, prioritize towers with LOWER team competition
-                        if (a.competitionScore !== b.competitionScore) {
+                        if (b.score !== a.score) return b.score - a.score;
+                        if (a.competitionScore !== b.competitionScore)
                           return a.competitionScore - b.competitionScore;
-                        }
-
-                        // 4. Final tie-break: Alphabetical order
                         return a.tower.localeCompare(b.tower);
                       });
 
@@ -1128,9 +1165,9 @@ function App() {
           id='panel-hot-to-not'
           role='tabpanel'
           aria-labelledby='tab-hot-to-not'
-          className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl overflow-x-auto'
+          className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl flex-1 flex flex-col'
         >
-          <div className='mb-6'>
+          <div className='mb-6 shrink-0'>
             <h2 className='text-xl font-bold text-slate-100 mb-2'>
               🔥 Hot to Not Score Matrix
             </h2>
@@ -1140,146 +1177,480 @@ function App() {
             </p>
           </div>
 
-          <table className='w-full text-left border-collapse min-w-[650px]'>
-            <thead>
-              <tr className='border-b border-slate-800 text-slate-300 text-sm'>
-                <th scope='col' className='py-3.5 px-4 font-bold'>
-                  Tower
-                </th>
-                {users.map((u) => (
+          <div className='overflow-y-auto max-h-[650px] rounded-2xl border border-slate-800/80'>
+            <table className='w-full text-left border-collapse min-w-[650px]'>
+              <thead>
+                <tr className='sticky top-0 z-30 bg-slate-900 text-slate-300 text-sm shadow-md'>
                   <th
-                    key={u}
                     scope='col'
-                    className='py-3.5 px-4 text-center font-bold'
+                    className='py-3.5 px-4 font-bold bg-slate-900'
                   >
-                    {u}
+                    Tower
                   </th>
-                ))}
-                <th
-                  scope='col'
-                  className='py-3.5 px-4 text-center font-bold text-sky-400'
-                >
-                  Average
-                </th>
-              </tr>
-            </thead>
-            <tbody className='divide-y divide-slate-800/60'>
-              {sortedOverall.map((stats) => (
-                <tr
-                  key={stats.tower}
-                  className='hover:bg-slate-950/50 transition'
-                >
-                  <th scope='row' className='py-3.5 px-4 font-normal'>
-                    <div className='flex items-center gap-2.5'>
-                      <span className='font-bold text-slate-100'>
-                        {stats.tower}
-                      </span>
-                      <CategoryBadge category={stats.category} />
-                      <StateBadge state={stats.state} />
-                    </div>
+                  {users.map((u) => (
+                    <th
+                      key={u}
+                      scope='col'
+                      className='py-3.5 px-4 text-center font-bold bg-slate-900'
+                    >
+                      {u}
+                    </th>
+                  ))}
+                  <th
+                    scope='col'
+                    className='py-3.5 px-4 text-center font-bold text-sky-400 bg-slate-900'
+                  >
+                    Average
                   </th>
-                  {users.map((u) => {
-                    const score =
-                      ratings[u]?.[stats.tower] !== undefined
-                        ? ratings[u][stats.tower]
-                        : DEFAULT_SCORE;
-                    const isExplicit =
-                      ratings[u]?.[stats.tower] !== undefined &&
-                      ratings[u][stats.tower] > 0;
-                    return (
-                      <td key={u} className='py-3.5 px-4 text-center'>
-                        <span
-                          className={`inline-block w-9 h-9 leading-9 rounded-xl font-bold text-sm ${getHeatmapClass(score)}`}
-                        >
-                          {score}
-                          {!isExplicit && '*'}
-                        </span>
-                      </td>
-                    );
-                  })}
-                  <td className='py-3.5 px-4 text-center font-extrabold text-sky-400 text-base'>
-                    {stats.avg}
-                  </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </main>
-      )}
-
-      {/* TAB 4: RIVALRY & COMPETITION RADAR */}
-      {activeTab === 'rivalry' && (
-        <main
-          id='panel-rivalry'
-          role='tabpanel'
-          aria-labelledby='panel-rivalry'
-          className='space-y-6'
-        >
-          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
-            <div className='mb-6'>
-              <h2 className='text-xl font-bold text-slate-100 mb-2'>
-                ⚔️ Contested Stations & High Rivalry
-              </h2>
-              <p className='text-sm text-slate-300'>
-                Towers where multiple controllers have rated 4/5 or 5/5, ranked
-                by highest direct competition.
-              </p>
-            </div>
-
-            <div className='space-y-3.5'>
-              {sortedOverall
-                .filter((s) => s.highScorers.length > 0)
-                .sort((a, b) => {
-                  // 1st Priority: Most high scorers (most people competing for it)
-                  if (b.highScorers.length !== a.highScorers.length) {
-                    return b.highScorers.length - a.highScorers.length;
-                  }
-                  // 2nd Priority: Highest team average score
-                  return b.rawAvg - a.rawAvg;
-                })
-                .map((stats) => (
-                  <div
+              </thead>
+              <tbody className='divide-y divide-slate-800/60'>
+                {sortedOverall.map((stats) => (
+                  <tr
                     key={stats.tower}
-                    className='bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-inner'
+                    className='hover:bg-slate-950/50 transition'
                   >
-                    <div className='flex items-center gap-3'>
+                    <th scope='row' className='py-3.5 px-4 font-normal'>
                       <div className='flex items-center gap-2.5'>
-                        <span className='font-bold text-lg text-slate-100'>
+                        <span className='font-bold text-slate-100'>
                           {stats.tower}
                         </span>
                         <CategoryBadge category={stats.category} />
                         <StateBadge state={stats.state} />
                       </div>
-                    </div>
-                    <div className='flex flex-wrap items-center gap-2'>
-                      <span className='text-xs text-slate-400 font-semibold'>
-                        High Scorer Contestants ({stats.highScorers.length}):
-                      </span>
-                      {stats.highScorers.map((con) => (
-                        <span
-                          key={con}
-                          className='text-xs bg-sky-950/90 text-sky-300 border border-sky-800/80 px-2.5 py-1 rounded-lg font-bold'
-                        >
-                          {con}
-                        </span>
-                      ))}
+                    </th>
+                    {users.map((u) => {
+                      const score =
+                        ratings[u]?.[stats.tower] !== undefined
+                          ? ratings[u][stats.tower]
+                          : DEFAULT_SCORE;
+                      const isExplicit =
+                        ratings[u]?.[stats.tower] !== undefined &&
+                        ratings[u][stats.tower] > 0;
+                      return (
+                        <td key={u} className='py-3.5 px-4 text-center'>
+                          <span
+                            className={`inline-block w-9 h-9 leading-9 rounded-xl font-bold text-sm ${getHeatmapClass(score)}`}
+                          >
+                            {score}
+                            {!isExplicit && '*'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td className='py-3.5 px-4 text-center font-extrabold text-sky-400 text-base'>
+                      {stats.avg}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </main>
+      )}
+
+      {/* TAB 4: TEAM TRIVIA & SUPERLATIVES */}
+      {activeTab === 'trivia' && (
+        <main
+          id='panel-trivia'
+          role='tabpanel'
+          aria-labelledby='tab-trivia'
+          className='space-y-6 flex-1'
+        >
+          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
+            <div className='mb-6'>
+              <h2 className='text-xl font-bold text-slate-100 mb-2'>
+                💡 Team Rating Trivia & Superlatives
+              </h2>
+              <p className='text-sm text-slate-300'>
+                Automatic fun facts, structural breakdowns, and standout
+                superlatives derived straight from your team's live ratings.
+              </p>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+              {/* Card 1: Most Polarized */}
+              <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-lg'>
+                    ⚡
+                  </div>
+                  <div>
+                    <h3 className='font-bold text-slate-100 text-sm'>
+                      The Team Civil War
+                    </h3>
+                    <p className='text-[11px] text-slate-400'>
+                      Most polarizing tower
+                    </p>
+                  </div>
+                </div>
+                <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                  <div>
+                    <span className='font-bold text-base text-sky-300'>
+                      {mostPolarized ? mostPolarized.tower : 'N/A'}
+                    </span>
+                    <div className='flex items-center gap-1.5 mt-1'>
+                      {mostPolarized && (
+                        <CategoryBadge category={mostPolarized.category} />
+                      )}
+                      {mostPolarized && (
+                        <StateBadge state={mostPolarized.state} />
+                      )}
                     </div>
                   </div>
-                ))}
+                  <div className='text-right'>
+                    <span className='text-[10px] text-slate-400 block font-semibold'>
+                      Variance
+                    </span>
+                    <span className='font-mono text-amber-400 font-extrabold text-sm'>
+                      {mostPolarized ? mostPolarized.variance : '0.00'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Unanimous Crowd Pleaser */}
+              <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-lg'>
+                    🏆
+                  </div>
+                  <div>
+                    <h3 className='font-bold text-slate-100 text-sm'>
+                      The Crowd Pleaser
+                    </h3>
+                    <p className='text-[11px] text-slate-400'>
+                      Highest team average
+                    </p>
+                  </div>
+                </div>
+                <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                  <div>
+                    <span className='font-bold text-base text-sky-300'>
+                      {crowdPleaser ? crowdPleaser.tower : 'N/A'}
+                    </span>
+                    <div className='flex items-center gap-1.5 mt-1'>
+                      {crowdPleaser && (
+                        <CategoryBadge category={crowdPleaser.category} />
+                      )}
+                      {crowdPleaser && (
+                        <StateBadge state={crowdPleaser.state} />
+                      )}
+                    </div>
+                  </div>
+                  <div className='text-right'>
+                    <span className='text-[10px] text-slate-400 block font-semibold'>
+                      Average
+                    </span>
+                    <span className='font-mono text-emerald-400 font-extrabold text-sm'>
+                      {crowdPleaser ? crowdPleaser.avg : '0.00'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Avoidance Zone */}
+              <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center font-bold text-lg'>
+                    🚫
+                  </div>
+                  <div>
+                    <h3 className='font-bold text-slate-100 text-sm'>
+                      The Avoidance Zone
+                    </h3>
+                    <p className='text-[11px] text-slate-400'>
+                      Lowest team average score
+                    </p>
+                  </div>
+                </div>
+                <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                  <div>
+                    <span className='font-bold text-base text-sky-300'>
+                      {avoidanceZone ? avoidanceZone.tower : 'N/A'}
+                    </span>
+                    <div className='flex items-center gap-1.5 mt-1'>
+                      {avoidanceZone && (
+                        <CategoryBadge category={avoidanceZone.category} />
+                      )}
+                      {avoidanceZone && (
+                        <StateBadge state={avoidanceZone.state} />
+                      )}
+                    </div>
+                  </div>
+                  <div className='text-right'>
+                    <span className='text-[10px] text-slate-400 block font-semibold'>
+                      Average
+                    </span>
+                    <span className='font-mono text-rose-400 font-extrabold text-sm'>
+                      {avoidanceZone ? avoidanceZone.avg : '0.00'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: The Wild Card */}
+              <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-400 flex items-center justify-center font-bold text-lg'>
+                    🃏
+                  </div>
+                  <div>
+                    <h3 className='font-bold text-slate-100 text-sm'>
+                      The Wild Card
+                    </h3>
+                    <p className='text-[11px] text-slate-400'>
+                      Most erratic score spread
+                    </p>
+                  </div>
+                </div>
+                <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                  <div>
+                    <span className='font-bold text-base text-sky-300'>
+                      {mostPolarized ? mostPolarized.tower : 'N/A'}
+                    </span>
+                    <div className='flex items-center gap-1.5 mt-1'>
+                      {mostPolarized && (
+                        <CategoryBadge category={mostPolarized.category} />
+                      )}
+                      {mostPolarized && (
+                        <StateBadge state={mostPolarized.state} />
+                      )}
+                    </div>
+                  </div>
+                  <div className='text-right'>
+                    <span className='text-[10px] text-slate-400 block font-semibold'>
+                      Spread
+                    </span>
+                    <span className='font-mono text-teal-400 font-extrabold text-sm'>
+                      {mostPolarized
+                        ? `${Math.max(...Object.values(mostPolarized.scoresMap)) - Math.min(...Object.values(mostPolarized.scoresMap).filter((s) => s > 0))} pts`
+                        : '0 pts'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 5: Controller MVP (Optimist) */}
+              {(() => {
+                const optimist = users.reduce(
+                  (best, u) => {
+                    const uScores = Object.values(ratings[u] || {}).filter(
+                      (s) => s > 0,
+                    );
+                    const avg = uScores.length
+                      ? uScores.reduce((a, b) => a + b, 0) / uScores.length
+                      : 0;
+                    return avg > best.avg
+                      ? { name: u, avg: avg.toFixed(2) }
+                      : best;
+                  },
+                  { name: 'N/A', avg: 0 },
+                );
+
+                return (
+                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 flex items-center justify-center font-bold text-lg'>
+                        🌟
+                      </div>
+                      <div>
+                        <h3 className='font-bold text-slate-100 text-sm'>
+                          Controller MVP
+                        </h3>
+                        <p className='text-[11px] text-slate-400'>
+                          Highest average rating given
+                        </p>
+                      </div>
+                    </div>
+                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                      <div>
+                        <span className='font-bold text-base text-sky-300'>
+                          {optimist.name}
+                        </span>
+                        <span className='text-xs text-slate-400 block mt-0.5'>
+                          The Team Optimist
+                        </span>
+                      </div>
+                      <div className='text-right'>
+                        <span className='text-[10px] text-slate-400 block font-semibold'>
+                          User Avg
+                        </span>
+                        <span className='font-mono text-sky-400 font-extrabold text-sm'>
+                          {optimist.avg} / 5
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Card 6: The Hard Bargainer (Realist/Critic) */}
+              {(() => {
+                const realist = users.reduce(
+                  (strict, u) => {
+                    const uScores = Object.values(ratings[u] || {}).filter(
+                      (s) => s > 0,
+                    );
+                    const avg = uScores.length
+                      ? uScores.reduce((a, b) => a + b, 0) / uScores.length
+                      : 5;
+                    return avg < strict.avg
+                      ? { name: u, avg: avg.toFixed(2) }
+                      : strict;
+                  },
+                  { name: 'N/A', avg: 5 },
+                );
+
+                return (
+                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400 flex items-center justify-center font-bold text-lg'>
+                        🎯
+                      </div>
+                      <div>
+                        <h3 className='font-bold text-slate-100 text-sm'>
+                          The Hard Bargainer
+                        </h3>
+                        <p className='text-[11px] text-slate-400'>
+                          Lowest average rating given
+                        </p>
+                      </div>
+                    </div>
+                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                      <div>
+                        <span className='font-bold text-base text-orange-300'>
+                          {realist.name}
+                        </span>
+                        <span className='text-xs text-slate-400 block mt-0.5'>
+                          Strict Standards
+                        </span>
+                      </div>
+                      <div className='text-right'>
+                        <span className='text-[10px] text-slate-400 block font-semibold'>
+                          User Avg
+                        </span>
+                        <span className='font-mono text-orange-400 font-extrabold text-sm'>
+                          {realist.avg} / 5
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Card 7: The Lone Wolf */}
+              {(() => {
+                let maxDevUser = 'N/A';
+                let maxDevVal = -1;
+                users.forEach((u) => {
+                  let devSum = 0;
+                  let count = 0;
+                  towerMetrics.forEach((m) => {
+                    const s = getScore(u, m.tower);
+                    if (s > 0) {
+                      devSum += Math.abs(s - m.rawAvg);
+                      count++;
+                    }
+                  });
+                  const avgDev = count ? devSum / count : 0;
+                  if (avgDev > maxDevVal) {
+                    maxDevVal = avgDev;
+                    maxDevUser = u;
+                  }
+                });
+
+                return (
+                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 rounded-xl bg-pink-500/20 border border-pink-500/30 text-pink-400 flex items-center justify-center font-bold text-lg'>
+                        🐺
+                      </div>
+                      <div>
+                        <h3 className='font-bold text-slate-100 text-sm'>
+                          The Lone Wolf
+                        </h3>
+                        <p className='text-[11px] text-slate-400'>
+                          Highest deviation from group avg
+                        </p>
+                      </div>
+                    </div>
+                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                      <div>
+                        <span className='font-bold text-base text-pink-300'>
+                          {maxDevUser}
+                        </span>
+                        <span className='text-xs text-slate-400 block mt-0.5'>
+                          Unique Taste Profile
+                        </span>
+                      </div>
+                      <div className='text-right'>
+                        <span className='text-[10px] text-slate-400 block font-semibold'>
+                          Avg Variance
+                        </span>
+                        <span className='font-mono text-pink-400 font-extrabold text-sm'>
+                          {maxDevVal.toFixed(2)} pts
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Card 8: Perfectionist Peak */}
+              {(() => {
+                const perfectCount = towerMetrics.filter((m) =>
+                  Object.values(m.scoresMap).includes(5),
+                ).length;
+                return (
+                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 flex items-center justify-center font-bold text-lg'>
+                        ⭐
+                      </div>
+                      <div>
+                        <h3 className='font-bold text-slate-100 text-sm'>
+                          Five-Star Favorites
+                        </h3>
+                        <p className='text-[11px] text-slate-400'>
+                          Towers with at least one 5/5 score
+                        </p>
+                      </div>
+                    </div>
+                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                      <div>
+                        <span className='font-bold text-base text-yellow-300'>
+                          {perfectCount} of 31 Towers
+                        </span>
+                        <span className='text-xs text-slate-400 block mt-0.5'>
+                          Hit Top Tier Status
+                        </span>
+                      </div>
+                      <div className='text-right'>
+                        <span className='text-[10px] text-slate-400 block font-semibold'>
+                          Percentage
+                        </span>
+                        <span className='font-mono text-yellow-400 font-extrabold text-sm'>
+                          {Math.round((perfectCount / 31) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </section>
         </main>
       )}
 
-      {/* TAB 5: CATEGORY & STATE STATS */}
+      {/* TAB 5: BEST TO REST BREAKDOWN */}
       {activeTab === 'breakdown' && (
         <main
           id='panel-breakdown'
           role='tabpanel'
           aria-labelledby='tab-breakdown'
-          className='space-y-6'
+          className='space-y-6 flex-1'
         >
-          {/* Category Breakdown */}
           <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
             <div className='mb-6'>
               <h2 className='text-xl font-bold text-slate-100 mb-2'>
@@ -1330,7 +1701,6 @@ function App() {
             </div>
           </section>
 
-          {/* State Breakdown */}
           <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
             <div className='mb-6'>
               <h2 className='text-xl font-bold text-slate-100 mb-2'>
