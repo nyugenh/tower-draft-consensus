@@ -60,7 +60,7 @@ const CONTROLLERS = [
 
 const DEFAULT_SCORE = 0; // Default score is 0 (Unrated)
 
-// State Badge styling lookup (Optimized contrast for dark mode)
+// State Badge styling lookup (Optimised contrast for dark mode)
 const STATE_BADGE_CLASSES = {
   VIC: 'bg-indigo-950/80 text-indigo-300 border-indigo-700/60',
   NSW: 'bg-sky-950/80 text-sky-300 border-sky-700/60',
@@ -214,7 +214,7 @@ function App() {
     localStorage.setItem('atc_current_user', currentUser);
   }, [currentUser]);
 
-  const handleRandomizeSlots = () => {
+  const handleRandomiseSlots = () => {
     const shuffled = [...ALL_TOWERS].sort(() => 0.5 - Math.random());
     setTargetSlots(shuffled.slice(0, 6));
   };
@@ -670,8 +670,10 @@ function App() {
       <nav
         aria-label='Main Navigation'
         className={`mb-6 transition-all duration-200 ${
-          activeTab === 'trivia' || activeTab === 'breakdown'
-            ? 'sticky top-0 z-40 bg-slate-950/95 backdrop-blur-xl py-2'
+          activeTab === 'trivia' ||
+          activeTab === 'breakdown' ||
+          activeTab === 'hot-to-not'
+            ? 'sticky top-0 z-40 bg-slate-950/95 backdrop-blur-xl'
             : ''
         }`}
       >
@@ -898,21 +900,26 @@ function App() {
           aria-labelledby='tab-draft'
           className='space-y-6 flex-1'
         >
-          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl relative'>
-            {/* Pinned Header Bar with Randomize Button */}
-            <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl py-3.5 mb-6 border-b border-slate-800 flex flex-col sm:flex-row justify-between sm:items-center gap-4'>
-              <div>
-                <h2 className='text-xl font-bold text-slate-100 mb-1'>
-                  Select Final Target List (6 Slots)
-                </h2>
-                <p className='text-sm text-slate-300'>
-                  Choose the 6 destination towers for the draft. Duplicates
-                  allowed.
-                </p>
-              </div>
+          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
+            {/* Header & Description (Scrolls away normally) */}
+            <div className='mb-6'>
+              <h2 className='text-xl font-bold text-slate-100 mb-1'>
+                Select Final Target List (6 Slots)
+              </h2>
+              <p className='text-sm text-slate-300'>
+                Choose the 6 destination towers for the draft. Duplicates
+                allowed.
+              </p>
+            </div>
+
+            {/* Pinned Action Bar */}
+            <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl py-3.5 px-4 rounded-2xl mb-6 border border-slate-800 flex justify-between items-center shadow-2xl'>
+              <span className='text-sm font-bold text-slate-200'>
+                Target Slots (6)
+              </span>
               <button
-                onClick={handleRandomizeSlots}
-                className='px-4 py-2.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 self-start sm:self-auto cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-md'
+                onClick={handleRandomiseSlots}
+                className='px-4 py-2.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-md'
               >
                 🎲 Random 6 Towers
               </button>
@@ -965,7 +972,7 @@ function App() {
               onClick={runOptimalDraft}
               className='w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 px-6 rounded-2xl transition duration-200 shadow-xl shadow-sky-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 text-sm md:text-base'
             >
-              ⚡ Run Optimal Placement Algorithm (Maximize Team Happiness)
+              ⚡ Run Optimal Placement Algorithm
             </button>
           </section>
 
