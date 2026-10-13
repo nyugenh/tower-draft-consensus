@@ -1039,18 +1039,21 @@ function App() {
               aria-live='polite'
             >
               {/* Pinned Tied Option & Clear Locks Bar */}
-              <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl py-3 px-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-2xl mb-4 min-h-[52px] transition-all duration-200'>
-                <div className='flex items-center gap-2 overflow-x-auto'>
+              <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-2xl mb-4 box-border'>
+                {/* Tied Options Area with horizontal scroll */}
+                <div
+                  className={`flex items-center gap-2 overflow-x-auto min-h-[36px] py-0.5 min-w-0 ${draftResult.options.length > 1 ? 'flex-1' : ''}`}
+                >
                   {draftResult.options.length > 1 ? (
                     <>
-                      <span className='text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap'>
+                      <span className='text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap shrink-0'>
                         View Tied Option:
                       </span>
                       {draftResult.options.map((_, idx) => (
                         <button
                           key={idx}
                           onClick={() => setSelectedOptionIdx(idx)}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition duration-150 ${
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition duration-150 whitespace-nowrap shrink-0 ${
                             selectedOptionIdx === idx
                               ? 'bg-sky-600 text-white shadow-md'
                               : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
@@ -1061,19 +1064,24 @@ function App() {
                       ))}
                     </>
                   ) : (
-                    <span className='text-xs font-bold text-slate-500 uppercase tracking-wider'>
+                    <span className='text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap'>
                       No tied options
                     </span>
                   )}
                 </div>
 
+                {/* Clear Locks Button Area (Inline when no tied options, wraps/aligns when tied options are present) */}
                 {Object.keys(manualLocks).length > 0 && (
-                  <button
-                    onClick={() => setManualLocks({})}
-                    className='px-3.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md'
+                  <div
+                    className={`flex items-center min-h-[36px] shrink-0 ${draftResult.options.length > 1 ? 'w-full sm:w-auto justify-end' : ''}`}
                   >
-                    Clear Locks ({Object.keys(manualLocks).length})
-                  </button>
+                    <button
+                      onClick={() => setManualLocks({})}
+                      className='px-3.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md whitespace-nowrap'
+                    >
+                      Clear Locks ({Object.keys(manualLocks).length})
+                    </button>
+                  </div>
                 )}
               </div>
 
