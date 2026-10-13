@@ -17,7 +17,7 @@ html {
 }
 
 body {
-  background-color: #020617; /* Slate 950 */
+  background-color: #020617; /* Slate 950 / Deep Midnight Base */
   color: #f8fafc; /* Slate 50 */
   font-family:
     system-ui,
@@ -29,16 +29,18 @@ body {
     Ubuntu,
     Cantarell,
     sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom Scrollbar for Matrix & Tables */
+/* Custom Scrollbar for Matrix, Tables & Modals */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a; /* Slate 900 */
+  background: #090d16;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -48,4 +50,12 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #475569; /* Slate 600 */
+}
+
+/* Accessible Focus Outlines */
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid #38bdf8; /* Sky 400 */
+  outline-offset: 2px;
 }
