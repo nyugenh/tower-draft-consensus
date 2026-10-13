@@ -666,12 +666,19 @@ function App() {
         </div>
       </section>
 
-      {/* Navigation Bar */}
-      <nav aria-label='Main Navigation' className='mb-6'>
+      {/* STICKY NAV BAR (Sticky on Trivia & Category Stats tabs, normal scroll otherwise) */}
+      <nav
+        aria-label='Main Navigation'
+        className={`mb-6 transition-all duration-200 ${
+          activeTab === 'trivia' || activeTab === 'breakdown'
+            ? 'sticky top-0 z-40 bg-slate-950/95 backdrop-blur-xl py-2'
+            : ''
+        }`}
+      >
         <div
           role='tablist'
           aria-label='App Navigation'
-          className='bg-slate-900/90 backdrop-blur-xl p-2.5 rounded-3xl border border-slate-800/80 flex flex-wrap sm:flex-nowrap gap-2 shadow-2xl'
+          className='bg-slate-900/90 backdrop-blur-xl p-2 rounded-3xl border border-slate-800/80 flex flex-wrap sm:flex-nowrap gap-2 shadow-2xl'
         >
           <button
             role='tab'
@@ -679,7 +686,7 @@ function App() {
             aria-selected={activeTab === 'rate'}
             aria-controls='panel-rate'
             onClick={() => setActiveTab('rate')}
-            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'rate'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
@@ -687,7 +694,7 @@ function App() {
           >
             <span>🎯 Rate Tower</span>
             <span
-              className={`text-[10px] font-mono px-2 py-0.5 rounded-md ${activeTab === 'rate' ? 'bg-sky-700 text-sky-100' : 'bg-slate-800 text-slate-400'}`}
+              className={`text-[9px] font-mono px-1.5 py-0.2 rounded-md ${activeTab === 'rate' ? 'bg-sky-700 text-sky-100' : 'bg-slate-800 text-slate-400'}`}
             >
               {getRatedCount(currentUser)}/31
             </span>
@@ -698,7 +705,7 @@ function App() {
             aria-selected={activeTab === 'draft'}
             aria-controls='panel-draft'
             onClick={() => setActiveTab('draft')}
-            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'draft'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
@@ -712,7 +719,7 @@ function App() {
             aria-selected={activeTab === 'hot-to-not'}
             aria-controls='panel-hot-to-not'
             onClick={() => setActiveTab('hot-to-not')}
-            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'hot-to-not'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
@@ -726,7 +733,7 @@ function App() {
             aria-selected={activeTab === 'trivia'}
             aria-controls='panel-trivia'
             onClick={() => setActiveTab('trivia')}
-            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'trivia'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
@@ -740,7 +747,7 @@ function App() {
             aria-selected={activeTab === 'breakdown'}
             aria-controls='panel-breakdown'
             onClick={() => setActiveTab('breakdown')}
-            className={`flex-1 min-w-[130px] px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer box-border ${
+            className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'breakdown'
                 ? 'bg-sky-600 text-white shadow-lg shadow-sky-950 border border-transparent'
                 : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800/80 border border-slate-800/60'
@@ -891,8 +898,9 @@ function App() {
           aria-labelledby='tab-draft'
           className='space-y-6 flex-1'
         >
-          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
-            <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6'>
+          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl relative'>
+            {/* Pinned Header Bar with Randomize Button */}
+            <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl py-3.5 mb-6 border-b border-slate-800 flex flex-col sm:flex-row justify-between sm:items-center gap-4'>
               <div>
                 <h2 className='text-xl font-bold text-slate-100 mb-1'>
                   Select Final Target List (6 Slots)
@@ -910,22 +918,23 @@ function App() {
               </button>
             </div>
 
+            {/* Scrolling Grid of 6 Slots */}
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6'>
               {targetSlots.map((slotVal, sIdx) => {
                 const meta = TOWER_METADATA[slotVal];
                 return (
                   <div
                     key={sIdx}
-                    className='bg-slate-950/80 p-5 rounded-2xl border border-slate-800/80 shadow-inner'
+                    className='bg-slate-950/80 p-4 rounded-2xl border border-slate-800/80 shadow-inner'
                   >
-                    <div className='flex justify-between items-center mb-2.5'>
+                    <div className='flex justify-between items-center mb-2'>
                       <label
                         htmlFor={`slot-${sIdx}`}
                         className='text-xs font-bold text-slate-300'
                       >
                         Target Slot #{sIdx + 1}
                       </label>
-                      <div className='flex items-center gap-2.5'>
+                      <div className='flex items-center gap-2'>
                         <CategoryBadge category={meta.category} />
                         <StateBadge state={meta.state} />
                       </div>
@@ -938,7 +947,7 @@ function App() {
                         newSlots[sIdx] = e.target.value;
                         setTargetSlots(newSlots);
                       }}
-                      className='w-full bg-slate-900 text-sky-300 font-bold px-3.5 py-2.5 rounded-xl border border-slate-700/80 focus:outline-none focus:border-sky-500 cursor-pointer text-sm shadow-inner'
+                      className='w-full bg-slate-900 text-sky-300 font-bold px-3 py-2 rounded-xl border border-slate-700/80 focus:outline-none focus:border-sky-500 cursor-pointer text-sm shadow-inner'
                     >
                       {ALL_TOWERS.map((t) => (
                         <option key={t} value={t}>
@@ -954,7 +963,7 @@ function App() {
 
             <button
               onClick={runOptimalDraft}
-              className='w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-4 px-6 rounded-2xl transition duration-200 shadow-xl shadow-sky-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 text-base'
+              className='w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 px-6 rounded-2xl transition duration-200 shadow-xl shadow-sky-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 text-sm md:text-base'
             >
               ⚡ Run Optimal Placement Algorithm (Maximize Team Happiness)
             </button>
@@ -962,49 +971,12 @@ function App() {
 
           {draftResult && (
             <section
-              className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6'
+              className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 relative'
               aria-live='polite'
             >
-              <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800/80 pb-4'>
-                <div>
-                  <h3 className='text-xl font-bold text-slate-100'>
-                    Optimal Placement Results
-                  </h3>
-                  {/* Sticky Option Selector for Tied Combinations */}
-                  {draftResult.options.length > 1 && (
-                    <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-800 flex items-center gap-2 overflow-x-auto shadow-2xl'>
-                      <span className='text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap'>
-                        View Tied Option:
-                      </span>
-                      {draftResult.options.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedOptionIdx(idx)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition duration-150 ${
-                            selectedOptionIdx === idx
-                              ? 'bg-sky-600 text-white shadow-md'
-                              : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
-                          }`}
-                        >
-                          Option #{idx + 1}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className='text-right'>
-                  <span className='text-2xl font-extrabold text-sky-400'>
-                    {draftResult.averageScore}{' '}
-                    <span className='text-xs text-slate-400 font-normal'>
-                      avg rating
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Sticky Option Selector for Tied Combinations */}
+              {/* Pinned Tied Option Selector */}
               {draftResult.options.length > 1 && (
-                <div className='sticky top-0 z-20 bg-slate-900/95 backdrop-blur-xl p-3 rounded-2xl border border-slate-800 flex items-center gap-2 overflow-x-auto shadow-xl'>
+                <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl py-3 px-4 rounded-2xl border border-slate-800 flex items-center gap-2 overflow-x-auto shadow-2xl mb-4'>
                   <span className='text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap'>
                     View Tied Option:
                   </span>
@@ -1023,6 +995,28 @@ function App() {
                   ))}
                 </div>
               )}
+
+              <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800/80 pb-4'>
+                <div>
+                  <h3 className='text-xl font-bold text-slate-100'>
+                    Optimal Placement Results
+                  </h3>
+                  {draftResult.options.length > 1 && (
+                    <p className='text-xs text-amber-300 font-semibold mt-1'>
+                      ⚡ Tie Detected: {draftResult.options.length} different
+                      combinations yield the exact same highest team score!
+                    </p>
+                  )}
+                </div>
+                <div className='text-right'>
+                  <span className='text-2xl font-extrabold text-sky-400'>
+                    {draftResult.averageScore}{' '}
+                    <span className='text-xs text-slate-400 font-normal'>
+                      avg rating
+                    </span>
+                  </span>
+                </div>
+              </div>
 
               {/* Active Selected Assignment Grid */}
               <div>
@@ -1134,11 +1128,6 @@ function App() {
                                   #{rIdx + 1}
                                 </span>
                                 <span>{item.tower}</span>
-                                {item.isAssigned && (
-                                  <span className='text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-md font-bold'>
-                                    Assigned
-                                  </span>
-                                )}
                               </div>
                               <div className='flex items-center gap-2'>
                                 <StateBadge state={item.meta.state} />
@@ -1167,8 +1156,8 @@ function App() {
           aria-labelledby='tab-hot-to-not'
           className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl flex-1 flex flex-col'
         >
-          <div className='mb-6 shrink-0'>
-            <h2 className='text-xl font-bold text-slate-100 mb-2'>
+          <div className='mb-4 shrink-0'>
+            <h2 className='text-xl font-bold text-slate-100 mb-1'>
               🔥 Hot to Not Score Matrix
             </h2>
             <p className='text-sm text-slate-300'>
@@ -1177,13 +1166,13 @@ function App() {
             </p>
           </div>
 
-          <div className='overflow-y-auto max-h-[650px] rounded-2xl border border-slate-800/80'>
+          <div className='relative overflow-x-auto overflow-y-auto max-h-[620px] rounded-2xl border border-slate-800/80 shadow-inner'>
             <table className='w-full text-left border-collapse min-w-[650px]'>
               <thead>
                 <tr className='sticky top-0 z-30 bg-slate-900 text-slate-300 text-sm shadow-md'>
                   <th
                     scope='col'
-                    className='py-3.5 px-4 font-bold bg-slate-900'
+                    className='py-3.5 px-4 font-bold bg-slate-900 border-b border-slate-800'
                   >
                     Tower
                   </th>
@@ -1191,14 +1180,14 @@ function App() {
                     <th
                       key={u}
                       scope='col'
-                      className='py-3.5 px-4 text-center font-bold bg-slate-900'
+                      className='py-3.5 px-4 text-center font-bold bg-slate-900 border-b border-slate-800'
                     >
                       {u}
                     </th>
                   ))}
                   <th
                     scope='col'
-                    className='py-3.5 px-4 text-center font-bold text-sky-400 bg-slate-900'
+                    className='py-3.5 px-4 text-center font-bold text-sky-400 bg-slate-900 border-b border-slate-800'
                   >
                     Average
                   </th>
