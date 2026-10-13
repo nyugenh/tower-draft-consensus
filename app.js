@@ -363,6 +363,12 @@ function App() {
 
   const sortedOverall = [...towerMetrics].sort((a, b) => b.rawAvg - a.rawAvg);
 
+  // Randomize 6 distinct target towers
+  const handleRandomizeSlots = () => {
+    const shuffled = [...ALL_TOWERS].sort(() => 0.5 - Math.random());
+    setTargetSlots(shuffled.slice(0, 6));
+  };
+
   // Optimal Draft Permutation Engine
   const runOptimalDraft = () => {
     const permute = (arr) => {
@@ -810,13 +816,23 @@ function App() {
           className='space-y-6'
         >
           <section className='bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-xl'>
-            <h2 className='text-xl font-bold text-slate-100 mb-2'>
-              Select Final Target List (6 Slots)
-            </h2>
-            <p className='text-sm text-slate-300 mb-6'>
-              Choose the 6 destination towers for the draft. Duplicates allowed.
-              Options sorted alphabetically.
-            </p>
+            <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6'>
+              <div>
+                <h2 className='text-xl font-bold text-slate-100'>
+                  Select Final Target List (6 Slots)
+                </h2>
+                <p className='text-sm text-slate-300 mt-0.5'>
+                  Choose the 6 destination towers for the draft. Duplicates
+                  allowed.
+                </p>
+              </div>
+              <button
+                onClick={handleRandomizeSlots}
+                className='px-4 py-2 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-xl transition duration-200 flex items-center gap-2 self-start sm:self-auto cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-md'
+              >
+                🎲 Random 6 Towers
+              </button>
+            </div>
 
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6'>
               {targetSlots.map((slotVal, sIdx) => {
@@ -846,7 +862,7 @@ function App() {
                         newSlots[sIdx] = e.target.value;
                         setTargetSlots(newSlots);
                       }}
-                      className='w-full bg-slate-900 text-sky-300 font-bold px-3 py-2 rounded-lg border border-slate-700/80 focus:outline-none focus:border-sky-500 cursor-pointer'
+                      className='w-full bg-slate-900 text-sky-300 font-bold px-3 py-2 rounded-lg border border-slate-700/80 focus:outline-none focus:border-sky-500 cursor-pointer text-sm'
                     >
                       {ALL_TOWERS.map((t) => (
                         <option key={t} value={t}>
@@ -918,45 +934,137 @@ function App() {
               )}
 
               {/* Active Selected Assignment Grid */}
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                {users.map((u) => {
-                  const currentOptionAssignments =
-                    draftResult.options[selectedOptionIdx];
-                  const assignment = currentOptionAssignments[u];
-                  const meta = TOWER_METADATA[assignment.tower];
-                  return (
-                    <div
-                      key={u}
-                      className='bg-slate-950/80 border border-slate-800/80 p-4 rounded-xl flex justify-between items-center'
-                    >
-                      <div>
-                        <span className='text-xs text-slate-400 block font-semibold'>
-                          Controller
-                        </span>
-                        <span className='font-bold text-slate-100 text-lg'>
-                          {u}
-                        </span>
-                      </div>
-                      <div className='text-center bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800'>
-                        <div className='flex items-center justify-center gap-1.5 mb-1'>
-                          <CategoryBadge category={meta.category} />
-                          <StateBadge state={meta.state} />
+              <div>
+                <h4 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-3'>
+                  Assigned Placements
+                </h4>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  {users.map((u) => {
+                    const currentOptionAssignments =
+                      draftResult.options[selectedOptionIdx];
+                    const assignment = currentOptionAssignments[u];
+                    const meta = TOWER_METADATA[assignment.tower];
+                    return (
+                      <div
+                        key={u}
+                        className='bg-slate-950/80 border border-slate-800/80 p-4 rounded-xl flex justify-between items-center'
+                      >
+                        <div>
+                          <span className='text-xs text-slate-400 block font-semibold'>
+                            Controller
+                          </span>
+                          <span className='font-bold text-slate-100 text-lg'>
+                            {u}
+                          </span>
                         </div>
-                        <span className='font-bold text-sky-300'>
-                          {assignment.tower}
-                        </span>
+                        <div className='text-center bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800'>
+                          <div className='flex items-center justify-center gap-1.5 mb-1'>
+                            <CategoryBadge category={meta.category} />
+                            <StateBadge state={meta.state} />
+                          </div>
+                          <span className='font-bold text-sky-300'>
+                            {assignment.tower}
+                          </span>
+                        </div>
+                        <div className='text-right'>
+                          <span className='text-xs text-slate-400 block font-semibold'>
+                            Rating
+                          </span>
+                          <span className='font-extrabold text-emerald-400 text-lg'>
+                            {assignment.score} / 5
+                          </span>
+                        </div>
                       </div>
-                      <div className='text-right'>
-                        <span className='text-xs text-slate-400 block font-semibold'>
-                          Rating
-                        </span>
-                        <span className='font-extrabold text-emerald-400 text-lg'>
-                          {assignment.score} / 5
-                        </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Individual Form Submission Guides (Ranked 1 to 6) */}
+              <div className='pt-4 border-t border-slate-800/80'>
+                <h4 className='text-sm font-bold text-slate-100 mb-1 flex items-center gap-2'>
+                  <span>📝 Form Submission Guides for Each ATC</span>
+                </h4>
+                <p className='text-xs text-slate-400 mb-4'>
+                  How each controller should rank the 6 target towers on their
+                  individual preference submission forms based on their rated
+                  scores:
+                </p>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  {users.map((u) => {
+                    const currentOptionAssignments =
+                      draftResult.options[selectedOptionIdx];
+                    const assignedTowerName =
+                      currentOptionAssignments[u]?.tower;
+
+                    // Rank the 6 target slots for this user with tie-breaker for assigned tower
+                    const rankedTargets = targetSlots
+                      .map((tower) => ({
+                        tower,
+                        score: getScore(u, tower),
+                        isAssigned: tower === assignedTowerName,
+                        meta: TOWER_METADATA[tower],
+                      }))
+                      .sort((a, b) => {
+                        // 1. Higher score comes first
+                        if (b.score !== a.score) return b.score - a.score;
+                        // 2. If scores tie, prioritize the assigned tower in this option so it leads at #1
+                        if (a.isAssigned !== b.isAssigned)
+                          return a.isAssigned ? -1 : 1;
+                        // 3. Fallback to alphabetical order
+                        return a.tower.localeCompare(b.tower);
+                      });
+
+                    return (
+                      <div
+                        key={u}
+                        className='bg-slate-950/90 border border-slate-800 p-4 rounded-xl space-y-2'
+                      >
+                        <div className='flex justify-between items-center border-b border-slate-800 pb-2'>
+                          <span className='font-bold text-sky-300 text-sm'>
+                            {u}'s Form Order
+                          </span>
+                          <span className='text-[10px] bg-slate-900 px-2 py-0.5 rounded text-slate-400 font-mono'>
+                            1 to 6
+                          </span>
+                        </div>
+                        <ol className='space-y-1.5 pt-1'>
+                          {rankedTargets.map((item, rIdx) => (
+                            <li
+                              key={rIdx}
+                              className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded border transition ${
+                                item.isAssigned
+                                  ? 'bg-sky-950/40 border-sky-600/50 text-sky-200'
+                                  : 'bg-slate-900/60 border-slate-800/60 text-slate-300'
+                              }`}
+                            >
+                              <div className='flex items-center gap-2'>
+                                <span className='font-extrabold text-sky-400 w-4'>
+                                  #{rIdx + 1}
+                                </span>
+                                <span className='font-semibold'>
+                                  {item.tower}
+                                </span>
+                                {item.isAssigned && (
+                                  <span className='text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.2 rounded font-bold'>
+                                    Assigned
+                                  </span>
+                                )}
+                              </div>
+                              <div className='flex items-center gap-1.5'>
+                                <StateBadge state={item.meta.state} />
+                                <span className='font-mono text-slate-400 text-[11px]'>
+                                  {item.score}/5
+                                </span>
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </section>
           )}
