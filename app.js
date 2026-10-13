@@ -142,6 +142,9 @@ function App() {
   const [draftResult, setDraftResult] = useState(null);
   const [selectedOptionIdx, setSelectedOptionIdx] = useState(0);
 
+  // Manual Locks State: { [user]: towerName }
+  const [manualLocks, setManualLocks] = useState({});
+
   // Initial load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('atc_tower_rankings_gsheet');
@@ -217,6 +220,7 @@ function App() {
   const handleRandomiseSlots = () => {
     const shuffled = [...ALL_TOWERS].sort(() => 0.5 - Math.random());
     setTargetSlots(shuffled.slice(0, 6));
+    setManualLocks({});
   };
 
   const handleRatingChange = async (tower, score) => {
@@ -423,87 +427,105 @@ function App() {
     (a, b) => a.rawAvg - b.rawAvg,
   )[0];
 
-  const secretAdmirerItem = towerMetrics.find((m) => {
-    const scores = Object.values(m.scoresMap);
-    const fivers = scores.filter((s) => s === 5).length;
-    const lowOrMids = scores.filter((s) => s > 0 && s <= 3).length;
-    return fivers === 1 && lowOrMids >= 4;
-  });
-
-  const highAgreementItem = [...towerMetrics]
-    .filter((m) => m.ratingsCount >= 3)
-    .sort((a, b) => a.variance - b.variance)[0];
-
-  // Top Category & Top State
-  const topCat = categoryStats[0];
-  const topSt = stateStats[0];
-
-  // Optimal Draft Permutation Engine
+  // Optimal Draft Permutation Engine respecting manual locks
   const runOptimalDraft = () => {
-    const permute = (arr) => {
-      let results = [];
-      const helper = (subArr, m) => {
-        if (m === 1) {
-          results.push([...subArr]);
-          return;
-        }
-        helper(subArr, m - 1);
-        for (let i = 0; i < m - 1; i++) {
-          if (m % 2 === 0) {
-            [subArr[i], subArr[m - 1]] = [subArr[m - 1], subArr[i]];
-          } else {
-            [subArr[0], subArr[m - 1]] = [subArr[m - 1], subArr[0]];
-          }
-          helper(subArr, m - 1);
-        }
-      };
-      helper(arr, arr.length);
-      return results;
-    };
+    const uniqueTargetTowers = [...new Set(targetSlots || [])];
+    if (uniqueTargetTowers.length === 0) return;
 
-    const slotIndices = [0, 1, 2, 3, 4, 5];
-    const allPermutations = permute(slotIndices);
-
-    let maxTotalScore = -1;
-    let winningPermutations = [];
-
-    allPermutations.forEach((perm) => {
-      let currentScore = 0;
-      users.forEach((userIndex, uIdx) => {
-        const assignedSlotIdx = perm[uIdx];
-        const towerName = targetSlots[assignedSlotIdx];
-        currentScore += getScore(users[uIdx], towerName);
-      });
-
-      if (currentScore > maxTotalScore) {
-        maxTotalScore = currentScore;
-        winningPermutations = [perm];
-      } else if (currentScore === maxTotalScore && maxTotalScore > -1) {
-        winningPermutations.push(perm);
-      }
+    const userSortedTowers = {};
+    users.forEach((u) => {
+      userSortedTowers[u] = uniqueTargetTowers
+        .map((tower) => ({
+          tower,
+          score: getScore(u, tower),
+          meta: TOWER_METADATA[tower] || { state: 'VIC' },
+        }))
+        .sort((a, b) => b.score - a.score);
     });
 
-    const formattedOptions = winningPermutations.map((perm) => {
+    const lockedTowersSet = new Set(Object.values(manualLocks).filter(Boolean));
+
+    let bestGlobalScore = -Infinity;
+    let optimalTopChoiceOptions = [];
+
+    const searchTopChoices = (
+      userIndex,
+      currentTopTowers,
+      usedTowers,
+      currentScore,
+    ) => {
+      if (userIndex === users.length) {
+        if (currentScore > bestGlobalScore) {
+          bestGlobalScore = currentScore;
+          optimalTopChoiceOptions = [[...currentTopTowers]];
+        } else if (currentScore === bestGlobalScore) {
+          optimalTopChoiceOptions.push([...currentTopTowers]);
+        }
+        return;
+      }
+
+      const u = users[userIndex];
+      const lockedTower = manualLocks[u];
+
+      if (lockedTower) {
+        const item = userSortedTowers[u].find((t) => t.tower === lockedTower);
+        if (item) {
+          currentTopTowers.push(item);
+          searchTopChoices(
+            userIndex + 1,
+            currentTopTowers,
+            usedTowers,
+            currentScore + item.score,
+          );
+          currentTopTowers.pop();
+        }
+        return;
+      }
+
+      for (const item of userSortedTowers[u]) {
+        if (!usedTowers.has(item.tower)) {
+          usedTowers.add(item.tower);
+          currentTopTowers.push(item);
+
+          searchTopChoices(
+            userIndex + 1,
+            currentTopTowers,
+            usedTowers,
+            currentScore + item.score,
+          );
+
+          currentTopTowers.pop();
+          usedTowers.delete(item.tower);
+        }
+      }
+    };
+
+    searchTopChoices(0, [], new Set(lockedTowersSet), 0);
+
+    const formattedOptions = optimalTopChoiceOptions.map((topChoiceList) => {
       const assignments = {};
       users.forEach((u, uIdx) => {
-        const slotIdx = perm[uIdx];
-        const towerName = targetSlots[slotIdx];
+        const topChoice = topChoiceList[uIdx];
         assignments[u] = {
-          slotIndex: slotIdx,
-          tower: towerName,
-          score: getScore(users[uIdx], towerName),
+          slotIndex: uIdx,
+          tower: topChoice.tower,
+          score: topChoice.score,
         };
       });
       return assignments;
     });
 
     setDraftResult({
-      totalScore: maxTotalScore,
-      averageScore: (maxTotalScore / users.length).toFixed(2),
-      options: formattedOptions,
+      totalScore: bestGlobalScore,
+      averageScore: (bestGlobalScore / users.length).toFixed(2),
+      options: formattedOptions.length > 0 ? formattedOptions : [{}],
     });
     setSelectedOptionIdx(0);
   };
+
+  useEffect(() => {
+    runOptimalDraft();
+  }, [targetSlots, ratings, manualLocks]);
 
   const getHeatmapClass = (score) => {
     if (score === 5)
@@ -516,14 +538,8 @@ function App() {
       return 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
     if (score === 1)
       return 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
-    return 'bg-slate-900/60 text-slate-400 border border-slate-800/80'; // 0 / unrated
+    return 'bg-slate-900/60 text-slate-400 border border-slate-800/80';
   };
-
-  // Calculate total team score competition for target slots
-  const towerDemand = {};
-  targetSlots.forEach((t) => {
-    towerDemand[t] = users.reduce((sum, u) => sum + getScore(u, t), 0);
-  });
 
   return (
     <div className='max-w-7xl mx-auto p-4 md:p-8 font-sans text-slate-100 antialiased relative min-h-screen bg-slate-950 flex flex-col'>
@@ -666,7 +682,7 @@ function App() {
         </div>
       </section>
 
-      {/* STICKY NAV BAR (Sticky on Trivia & Category Stats tabs, normal scroll otherwise) */}
+      {/* STICKY NAV BAR */}
       <nav
         aria-label='Main Navigation'
         className={`mb-6 transition-all duration-200 ${
@@ -901,28 +917,32 @@ function App() {
           className='space-y-6 flex-1'
         >
           <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
-            {/* Header & Description (Scrolls away normally) */}
-            <div className='mb-6'>
-              <h2 className='text-xl font-bold text-slate-100 mb-1'>
-                Select Final Target List (6 Slots)
-              </h2>
-              <p className='text-sm text-slate-300'>
-                Choose the 6 destination towers for the draft. Duplicates
-                allowed.
-              </p>
-            </div>
-
-            {/* Pinned Action Bar */}
-            <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl py-3.5 px-4 rounded-2xl mb-6 border border-slate-800 flex justify-between items-center shadow-2xl'>
-              <span className='text-sm font-bold text-slate-200'>
-                Target Slots (6)
-              </span>
-              <button
-                onClick={handleRandomiseSlots}
-                className='px-4 py-2.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-md'
-              >
-                🎲 Random 6 Towers
-              </button>
+            <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6'>
+              <div>
+                <h2 className='text-xl font-bold text-slate-100 mb-1'>
+                  Select Final Target List (6 Slots)
+                </h2>
+                <p className='text-sm text-slate-300'>
+                  Choose the 6 destination towers for the draft. Duplicates
+                  allowed.
+                </p>
+              </div>
+              <div className='flex items-center gap-2'>
+                {Object.keys(manualLocks).length > 0 && (
+                  <button
+                    onClick={() => setManualLocks({})}
+                    className='px-3 py-2 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md'
+                  >
+                    Clear Locks ({Object.keys(manualLocks).length})
+                  </button>
+                )}
+                <button
+                  onClick={handleRandomiseSlots}
+                  className='px-4 py-2.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-md'
+                >
+                  🎲 Random 6 Towers
+                </button>
+              </div>
             </div>
 
             {/* Scrolling Grid of 6 Slots */}
@@ -967,13 +987,6 @@ function App() {
                 );
               })}
             </div>
-
-            <button
-              onClick={runOptimalDraft}
-              className='w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 px-6 rounded-2xl transition duration-200 shadow-xl shadow-sky-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 text-sm md:text-base'
-            >
-              ⚡ Run Optimal Placement Algorithm
-            </button>
           </section>
 
           {draftResult && (
@@ -981,27 +994,44 @@ function App() {
               className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 relative'
               aria-live='polite'
             >
-              {/* Pinned Tied Option Selector */}
-              {draftResult.options.length > 1 && (
-                <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl py-3 px-4 rounded-2xl border border-slate-800 flex items-center gap-2 overflow-x-auto shadow-2xl mb-4'>
-                  <span className='text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap'>
-                    View Tied Option:
-                  </span>
-                  {draftResult.options.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedOptionIdx(idx)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition duration-150 ${
-                        selectedOptionIdx === idx
-                          ? 'bg-sky-600 text-white shadow-md'
-                          : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
-                      }`}
-                    >
-                      Option #{idx + 1}
-                    </button>
-                  ))}
+              {/* Pinned Tied Option & Clear Locks Bar */}
+              <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl py-3 px-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-2xl mb-4 min-h-[52px] transition-all duration-200'>
+                <div className='flex items-center gap-2 overflow-x-auto'>
+                  {draftResult.options.length > 1 ? (
+                    <>
+                      <span className='text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap'>
+                        View Tied Option:
+                      </span>
+                      {draftResult.options.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedOptionIdx(idx)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition duration-150 ${
+                            selectedOptionIdx === idx
+                              ? 'bg-sky-600 text-white shadow-md'
+                              : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
+                          }`}
+                        >
+                          Option #{idx + 1}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <span className='text-xs font-bold text-slate-500 uppercase tracking-wider'>
+                      No tied options
+                    </span>
+                  )}
                 </div>
-              )}
+
+                {Object.keys(manualLocks).length > 0 && (
+                  <button
+                    onClick={() => setManualLocks({})}
+                    className='px-3.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md'
+                  >
+                    Clear Locks ({Object.keys(manualLocks).length})
+                  </button>
+                )}
+              </div>
 
               <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800/80 pb-4'>
                 <div>
@@ -1033,13 +1063,24 @@ function App() {
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
                   {users.map((u) => {
                     const currentOptionAssignments =
-                      draftResult.options[selectedOptionIdx];
-                    const assignment = currentOptionAssignments[u];
-                    const meta = TOWER_METADATA[assignment.tower];
+                      draftResult.options[selectedOptionIdx] || {};
+                    const assignment = currentOptionAssignments[u] || {
+                      tower: '',
+                      score: 0,
+                    };
+                    const meta = TOWER_METADATA[assignment.tower] || {
+                      category: 'Radar',
+                      state: 'VIC',
+                    };
+                    const isLocked = manualLocks[u] === assignment.tower;
                     return (
                       <div
                         key={u}
-                        className='bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl flex justify-between items-center shadow-inner'
+                        className={`p-5 rounded-2xl flex justify-between items-center shadow-inner border transition ${
+                          isLocked
+                            ? 'bg-emerald-950/40 border-emerald-500/80 ring-1 ring-emerald-500/40'
+                            : 'bg-slate-950/80 border-slate-800/80'
+                        }`}
                       >
                         <div>
                           <span className='text-xs text-slate-400 block font-semibold'>
@@ -1049,12 +1090,16 @@ function App() {
                             {u}
                           </span>
                         </div>
-                        <div className='text-center bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-800'>
+                        <div
+                          className={`text-center px-3.5 py-2 rounded-xl border ${isLocked ? 'bg-emerald-950/60 border-emerald-700/60' : 'bg-slate-900 border-slate-800'}`}
+                        >
                           <div className='flex items-center justify-center gap-2 mb-1'>
                             <CategoryBadge category={meta.category} />
                             <StateBadge state={meta.state} />
                           </div>
-                          <span className='font-bold text-sky-300'>
+                          <span
+                            className={`font-bold ${isLocked ? 'text-emerald-300' : 'text-sky-300'}`}
+                          >
                             {assignment.tower}
                           </span>
                         </div>
@@ -1072,180 +1117,103 @@ function App() {
                 </div>
               </div>
 
-              {/* Individual Form Submission Guides (Ranked 1 to 6) */}
+              {/* Individual Form Submission Guides */}
               <div className='pt-4 border-t border-slate-800/80'>
                 <h4 className='text-sm font-bold text-slate-100 mb-1 flex items-center gap-2'>
                   <span>📝 Form Submission Guides for Each ATC</span>
                 </h4>
                 <p className='text-xs text-slate-400 mb-4'>
-                  How each controller should rank the 6 target towers on their
-                  individual preference submission forms to lock in this optimal
-                  team outcome:
+                  Click any tower row below to instantly lock it as that
+                  controller's #1 top choice:
                 </p>
 
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                  {(() => {
-                    // 1. Strip duplicate towers so only unique towers remain
+                  {users.map((u) => {
                     const uniqueTargetTowers = [...new Set(targetSlots || [])];
-                    if (uniqueTargetTowers.length === 0)
-                      return (
-                        <div className='text-slate-400 text-xs col-span-full'>
-                          No target towers available.
+                    const currentLock = manualLocks[u];
+                    const assignedTowerName =
+                      draftResult.options[selectedOptionIdx]?.[u]?.tower;
+
+                    // 1. #1 is EXACTLY what was calculated in the optimal placement result (or manual lock if set)
+                    const topTowerName = currentLock || assignedTowerName;
+
+                    // 2. Gather all other target towers, sorted by personal score descending
+                    const otherTowers = uniqueTargetTowers
+                      .filter((t) => t !== topTowerName)
+                      .map((tower) => ({
+                        tower,
+                        score: getScore(u, tower),
+                        meta: TOWER_METADATA[tower] || { state: 'VIC' },
+                      }))
+                      .sort((a, b) => {
+                        if (b.score !== a.score) return b.score - a.score;
+                        return a.tower.localeCompare(b.tower);
+                      });
+
+                    // 3. Combine: #1 is at the top, followed by the rest cleanly without duplicates
+                    let items = [
+                      {
+                        tower: topTowerName,
+                        score: getScore(u, topTowerName),
+                        isAssigned: topTowerName === assignedTowerName,
+                        meta: TOWER_METADATA[topTowerName] || { state: 'VIC' },
+                      },
+                      ...otherTowers.map((item) => ({
+                        ...item,
+                        isAssigned: item.tower === assignedTowerName,
+                      })),
+                    ];
+
+                    return (
+                      <div
+                        key={u}
+                        className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl space-y-2.5 shadow-inner'
+                      >
+                        <div>
+                          <span className='text-xs text-slate-400 block font-semibold'>
+                            Controller
+                          </span>
+                          <span className='font-bold text-slate-100 text-lg'>
+                            {u}
+                          </span>
                         </div>
-                      );
-
-                    const assignedMap = {};
-                    users.forEach((u) => {
-                      assignedMap[u] =
-                        draftResult.options[selectedOptionIdx]?.[u]?.tower;
-                    });
-
-                    // Helper to generate a valid list for a user given a shift
-                    const getShiftedList = (u, assignedTowerName, shift) => {
-                      const assignedIdx = Math.max(
-                        0,
-                        uniqueTargetTowers.indexOf(assignedTowerName),
-                      );
-                      const list = [];
-                      const seen = new Set();
-                      for (let c = 0; c < uniqueTargetTowers.length; c++) {
-                        const towerIndex =
-                          c === 0
-                            ? assignedIdx
-                            : (assignedIdx + c + shift) %
-                              uniqueTargetTowers.length;
-                        const tower = uniqueTargetTowers[towerIndex];
-                        if (seen.has(tower)) return null; // Invalid duplicate
-                        seen.add(tower);
-                        list.push({
-                          tower,
-                          score: getScore(u, tower),
-                          isAssigned: tower === assignedTowerName,
-                          meta: TOWER_METADATA[tower] || { state: 'VIC' },
-                        });
-                      }
-                      return list;
-                    };
-
-                    // Precompute all valid shifts for each user
-                    const userValidShifts = users.map((u) => {
-                      const assignedTowerName = assignedMap[u];
-                      const shifts = [];
-                      for (let s = 0; s < uniqueTargetTowers.length; s++) {
-                        const list = getShiftedList(u, assignedTowerName, s);
-                        if (list) {
-                          // Calculate score sum for this user's list (weighted by rank position)
-                          let score = 0;
-                          list.forEach((item, c) => {
-                            score +=
-                              item.score * (uniqueTargetTowers.length - c);
-                          });
-                          shifts.push({ shift: s, list, score });
-                        }
-                      }
-                      // Fallback shift if none generated
-                      if (shifts.length === 0) {
-                        shifts.push({
-                          shift: 0,
-                          list: getShiftedList(u, assignedMap[u], 0) || [],
-                          score: 0,
-                        });
-                      }
-                      return shifts;
-                    });
-
-                    // Brute-force find the global combination across all users that maximizes total score
-                    // AND enforces strict column uniqueness across the team.
-                    let bestGlobalScore = -Infinity;
-                    let bestGlobalMapping = null;
-
-                    const search = (userIndex, currentMapping, rankColumns) => {
-                      if (userIndex === users.length) {
-                        // Calculate total score for this global combination
-                        let totalScore = currentMapping.reduce(
-                          (acc, curr) => acc + curr.score,
-                          0,
-                        );
-                        if (totalScore > bestGlobalScore) {
-                          bestGlobalScore = totalScore;
-                          bestGlobalMapping = [...currentMapping];
-                        }
-                        return;
-                      }
-
-                      const u = users[userIndex];
-                      const shifts = userValidShifts[userIndex] || [];
-                      for (const option of shifts) {
-                        // Check column conflicts with already chosen users
-                        let hasConflict = false;
-                        const newRankCols = rankColumns.map(
-                          (col) => new Set(col),
-                        );
-
-                        for (let c = 0; c < option.list.length; c++) {
-                          if (newRankCols[c].has(option.list[c].tower)) {
-                            hasConflict = true;
-                            break;
-                          }
-                          newRankCols[c].add(option.list[c].tower);
-                        }
-
-                        if (!hasConflict) {
-                          currentMapping.push({
-                            user: u,
-                            list: option.list,
-                            score: option.score,
-                          });
-                          search(userIndex + 1, currentMapping, newRankCols);
-                          currentMapping.pop();
-                        }
-                      }
-                    };
-
-                    // Run the search starting from user 0
-                    const initialCols = Array(uniqueTargetTowers.length)
-                      .fill(null)
-                      .map(() => new Set());
-                    search(0, [], initialCols);
-
-                    // Fallback if no global combo found, defaults to first valid shift for each user
-                    const finalMapping = bestGlobalMapping
-                      ? bestGlobalMapping.reduce((acc, curr) => {
-                          acc[curr.user] = curr.list;
-                          return acc;
-                        }, {})
-                      : users.reduce((acc, u, idx) => {
-                          acc[u] = userValidShifts[idx]?.[0]?.list || [];
-                          return acc;
-                        }, {});
-
-                    return users.map((u) => {
-                      const rankedTargets = finalMapping[u] || [];
-                      return (
-                        <div
-                          key={u}
-                          className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl space-y-2.5 shadow-inner'
-                        >
-                          <div className='flex justify-between items-center border-b border-slate-800 pb-2.5'>
-                            <span className='font-bold text-sky-300 text-sm'>
-                              {u}'s Form Order
-                            </span>
-                            <span className='text-[10px] bg-slate-900 px-2.5 py-0.5 rounded-md text-slate-400 font-mono'>
-                              1 to {rankedTargets.length}
-                            </span>
-                          </div>
-                          <ol className='space-y-2 pt-1'>
-                            {rankedTargets.map((item, rIdx) => (
+                        <ol className='space-y-2 pt-1'>
+                          {items.map((item, rIdx) => {
+                            const isThisLocked = currentLock === item.tower;
+                            return (
                               <li
-                                key={rIdx}
-                                className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl border transition ${
-                                  item.isAssigned
-                                    ? 'bg-sky-950/40 border-sky-600/50 text-sky-200 font-bold shadow-sm'
-                                    : 'bg-slate-900/60 border-slate-800/60 text-slate-300'
+                                key={item.tower}
+                                onClick={() => {
+                                  setManualLocks((prev) => {
+                                    const next = { ...prev };
+                                    if (next[u] === item.tower) {
+                                      delete next[u];
+                                    } else {
+                                      Object.keys(next).forEach((otherUser) => {
+                                        if (next[otherUser] === item.tower) {
+                                          delete next[otherUser];
+                                        }
+                                      });
+                                      next[u] = item.tower;
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                title={`Click to lock ${item.tower} as #1 for ${u}`}
+                                className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl border transition cursor-pointer ${
+                                  isThisLocked
+                                    ? 'bg-emerald-950/50 border-emerald-500/70 text-emerald-200 font-bold shadow-sm ring-1 ring-emerald-500/40'
+                                    : rIdx === 0
+                                      ? 'bg-amber-950/30 border-amber-600/50 text-amber-200 font-semibold shadow-sm hover:border-amber-500'
+                                      : item.isAssigned
+                                        ? 'bg-sky-950/40 border-sky-600/50 text-sky-200 font-bold shadow-sm hover:border-sky-500'
+                                        : 'bg-slate-900/60 border-slate-800/60 text-slate-300 hover:bg-slate-800'
                                 }`}
                               >
                                 <div className='flex items-center gap-2'>
-                                  <span className='font-extrabold text-sky-400 w-4'>
+                                  <span
+                                    className={`font-extrabold w-4 ${isThisLocked ? 'text-emerald-400' : rIdx === 0 ? 'text-amber-400' : 'text-sky-400'}`}
+                                  >
                                     #{rIdx + 1}
                                   </span>
                                   <span>{item.tower}</span>
@@ -1257,12 +1225,12 @@ function App() {
                                   </span>
                                 </div>
                               </li>
-                            ))}
-                          </ol>
-                        </div>
-                      );
-                    });
-                  })()}
+                            );
+                          })}
+                        </ol>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
