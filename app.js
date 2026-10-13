@@ -1085,11 +1085,19 @@ function App() {
 
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
                   {(() => {
-                    const uniqueTargetTowers = [...new Set(targetSlots)];
+                    // 1. Strip duplicate towers so only unique towers remain
+                    const uniqueTargetTowers = [...new Set(targetSlots || [])];
+                    if (uniqueTargetTowers.length === 0)
+                      return (
+                        <div className='text-slate-400 text-xs col-span-full'>
+                          No target towers available.
+                        </div>
+                      );
+
                     const assignedMap = {};
                     users.forEach((u) => {
                       assignedMap[u] =
-                        draftResult.options[selectedOptionIdx][u]?.tower;
+                        draftResult.options[selectedOptionIdx]?.[u]?.tower;
                     });
 
                     // Helper to generate a valid list for a user given a shift
@@ -1113,7 +1121,7 @@ function App() {
                           tower,
                           score: getScore(u, tower),
                           isAssigned: tower === assignedTowerName,
-                          meta: TOWER_METADATA[tower],
+                          meta: TOWER_METADATA[tower] || { state: 'VIC' },
                         });
                       }
                       return list;
@@ -1134,6 +1142,14 @@ function App() {
                           });
                           shifts.push({ shift: s, list, score });
                         }
+                      }
+                      // Fallback shift if none generated
+                      if (shifts.length === 0) {
+                        shifts.push({
+                          shift: 0,
+                          list: getShiftedList(u, assignedMap[u], 0) || [],
+                          score: 0,
+                        });
                       }
                       return shifts;
                     });
@@ -1158,7 +1174,8 @@ function App() {
                       }
 
                       const u = users[userIndex];
-                      for (const option of userValidShifts[userIndex]) {
+                      const shifts = userValidShifts[userIndex] || [];
+                      for (const option of shifts) {
                         // Check column conflicts with already chosen users
                         let hasConflict = false;
                         const newRankCols = rankColumns.map(
@@ -1191,17 +1208,19 @@ function App() {
                       .map(() => new Set());
                     search(0, [], initialCols);
 
-                    // Fallback if no global combo found
+                    // Fallback if no global combo found, defaults to first valid shift for each user
                     const finalMapping = bestGlobalMapping
                       ? bestGlobalMapping.reduce((acc, curr) => {
                           acc[curr.user] = curr.list;
                           return acc;
                         }, {})
-                      : {};
+                      : users.reduce((acc, u, idx) => {
+                          acc[u] = userValidShifts[idx]?.[0]?.list || [];
+                          return acc;
+                        }, {});
 
                     return users.map((u) => {
-                      const rankedTargets =
-                        finalMapping[u] || userValidShifts[0][0].list;
+                      const rankedTargets = finalMapping[u] || [];
                       return (
                         <div
                           key={u}
@@ -1232,7 +1251,7 @@ function App() {
                                   <span>{item.tower}</span>
                                 </div>
                                 <div className='flex items-center gap-2'>
-                                  <StateBadge state={item.meta.state} />
+                                  <StateBadge state={item.meta?.state} />
                                   <span className='font-mono text-slate-400 text-[11px]'>
                                     {item.score}/5
                                   </span>
