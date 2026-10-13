@@ -1084,70 +1084,166 @@ function App() {
                 </p>
 
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                  {users.map((u) => {
-                    const currentOptionAssignments =
-                      draftResult.options[selectedOptionIdx];
-                    const assignedTowerName =
-                      currentOptionAssignments[u]?.tower;
+                  {(() => {
+                    const uniqueTargetTowers = [...new Set(targetSlots)];
+                    const assignedMap = {};
+                    users.forEach((u) => {
+                      assignedMap[u] =
+                        draftResult.options[selectedOptionIdx][u]?.tower;
+                    });
 
-                    const rankedTargets = targetSlots
-                      .map((tower) => ({
-                        tower,
-                        score: getScore(u, tower),
-                        isAssigned: tower === assignedTowerName,
-                        competitionScore: towerDemand[tower],
-                        meta: TOWER_METADATA[tower],
-                      }))
-                      .sort((a, b) => {
-                        if (a.isAssigned !== b.isAssigned)
-                          return a.isAssigned ? -1 : 1;
-                        if (b.score !== a.score) return b.score - a.score;
-                        if (a.competitionScore !== b.competitionScore)
-                          return a.competitionScore - b.competitionScore;
-                        return a.tower.localeCompare(b.tower);
-                      });
+                    // Helper to generate a valid list for a user given a shift
+                    const getShiftedList = (u, assignedTowerName, shift) => {
+                      const assignedIdx = Math.max(
+                        0,
+                        uniqueTargetTowers.indexOf(assignedTowerName),
+                      );
+                      const list = [];
+                      const seen = new Set();
+                      for (let c = 0; c < uniqueTargetTowers.length; c++) {
+                        const towerIndex =
+                          c === 0
+                            ? assignedIdx
+                            : (assignedIdx + c + shift) %
+                              uniqueTargetTowers.length;
+                        const tower = uniqueTargetTowers[towerIndex];
+                        if (seen.has(tower)) return null; // Invalid duplicate
+                        seen.add(tower);
+                        list.push({
+                          tower,
+                          score: getScore(u, tower),
+                          isAssigned: tower === assignedTowerName,
+                          meta: TOWER_METADATA[tower],
+                        });
+                      }
+                      return list;
+                    };
 
-                    return (
-                      <div
-                        key={u}
-                        className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl space-y-2.5 shadow-inner'
-                      >
-                        <div className='flex justify-between items-center border-b border-slate-800 pb-2.5'>
-                          <span className='font-bold text-sky-300 text-sm'>
-                            {u}'s Form Order
-                          </span>
-                          <span className='text-[10px] bg-slate-900 px-2.5 py-0.5 rounded-md text-slate-400 font-mono'>
-                            1 to 6
-                          </span>
+                    // Precompute all valid shifts for each user
+                    const userValidShifts = users.map((u) => {
+                      const assignedTowerName = assignedMap[u];
+                      const shifts = [];
+                      for (let s = 0; s < uniqueTargetTowers.length; s++) {
+                        const list = getShiftedList(u, assignedTowerName, s);
+                        if (list) {
+                          // Calculate score sum for this user's list (weighted by rank position)
+                          let score = 0;
+                          list.forEach((item, c) => {
+                            score +=
+                              item.score * (uniqueTargetTowers.length - c);
+                          });
+                          shifts.push({ shift: s, list, score });
+                        }
+                      }
+                      return shifts;
+                    });
+
+                    // Brute-force find the global combination across all users that maximizes total score
+                    // AND enforces strict column uniqueness across the team.
+                    let bestGlobalScore = -Infinity;
+                    let bestGlobalMapping = null;
+
+                    const search = (userIndex, currentMapping, rankColumns) => {
+                      if (userIndex === users.length) {
+                        // Calculate total score for this global combination
+                        let totalScore = currentMapping.reduce(
+                          (acc, curr) => acc + curr.score,
+                          0,
+                        );
+                        if (totalScore > bestGlobalScore) {
+                          bestGlobalScore = totalScore;
+                          bestGlobalMapping = [...currentMapping];
+                        }
+                        return;
+                      }
+
+                      const u = users[userIndex];
+                      for (const option of userValidShifts[userIndex]) {
+                        // Check column conflicts with already chosen users
+                        let hasConflict = false;
+                        const newRankCols = rankColumns.map(
+                          (col) => new Set(col),
+                        );
+
+                        for (let c = 0; c < option.list.length; c++) {
+                          if (newRankCols[c].has(option.list[c].tower)) {
+                            hasConflict = true;
+                            break;
+                          }
+                          newRankCols[c].add(option.list[c].tower);
+                        }
+
+                        if (!hasConflict) {
+                          currentMapping.push({
+                            user: u,
+                            list: option.list,
+                            score: option.score,
+                          });
+                          search(userIndex + 1, currentMapping, newRankCols);
+                          currentMapping.pop();
+                        }
+                      }
+                    };
+
+                    // Run the search starting from user 0
+                    const initialCols = Array(uniqueTargetTowers.length)
+                      .fill(null)
+                      .map(() => new Set());
+                    search(0, [], initialCols);
+
+                    // Fallback if no global combo found
+                    const finalMapping = bestGlobalMapping
+                      ? bestGlobalMapping.reduce((acc, curr) => {
+                          acc[curr.user] = curr.list;
+                          return acc;
+                        }, {})
+                      : {};
+
+                    return users.map((u) => {
+                      const rankedTargets =
+                        finalMapping[u] || userValidShifts[0][0].list;
+                      return (
+                        <div
+                          key={u}
+                          className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl space-y-2.5 shadow-inner'
+                        >
+                          <div className='flex justify-between items-center border-b border-slate-800 pb-2.5'>
+                            <span className='font-bold text-sky-300 text-sm'>
+                              {u}'s Form Order
+                            </span>
+                            <span className='text-[10px] bg-slate-900 px-2.5 py-0.5 rounded-md text-slate-400 font-mono'>
+                              1 to {rankedTargets.length}
+                            </span>
+                          </div>
+                          <ol className='space-y-2 pt-1'>
+                            {rankedTargets.map((item, rIdx) => (
+                              <li
+                                key={rIdx}
+                                className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl border transition ${
+                                  item.isAssigned
+                                    ? 'bg-sky-950/40 border-sky-600/50 text-sky-200 font-bold shadow-sm'
+                                    : 'bg-slate-900/60 border-slate-800/60 text-slate-300'
+                                }`}
+                              >
+                                <div className='flex items-center gap-2'>
+                                  <span className='font-extrabold text-sky-400 w-4'>
+                                    #{rIdx + 1}
+                                  </span>
+                                  <span>{item.tower}</span>
+                                </div>
+                                <div className='flex items-center gap-2'>
+                                  <StateBadge state={item.meta.state} />
+                                  <span className='font-mono text-slate-400 text-[11px]'>
+                                    {item.score}/5
+                                  </span>
+                                </div>
+                              </li>
+                            ))}
+                          </ol>
                         </div>
-                        <ol className='space-y-2 pt-1'>
-                          {rankedTargets.map((item, rIdx) => (
-                            <li
-                              key={rIdx}
-                              className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl border transition ${
-                                item.isAssigned
-                                  ? 'bg-sky-950/40 border-sky-600/50 text-sky-200 font-bold shadow-sm'
-                                  : 'bg-slate-900/60 border-slate-800/60 text-slate-300'
-                              }`}
-                            >
-                              <div className='flex items-center gap-2'>
-                                <span className='font-extrabold text-sky-400 w-4'>
-                                  #{rIdx + 1}
-                                </span>
-                                <span>{item.tower}</span>
-                              </div>
-                              <div className='flex items-center gap-2'>
-                                <StateBadge state={item.meta.state} />
-                                <span className='font-mono text-slate-400 text-[11px]'>
-                                  {item.score}/5
-                                </span>
-                              </div>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </section>
