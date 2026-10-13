@@ -427,89 +427,110 @@ function App() {
     (a, b) => a.rawAvg - b.rawAvg,
   )[0];
 
-  // Optimal Draft Permutation Engine respecting manual locks
+  // Optimal Draft Permutation Engine with Frequency-Validated Locks
   const runOptimalDraft = () => {
-    const uniqueTargetTowers = [...new Set(targetSlots || [])];
-    if (uniqueTargetTowers.length === 0) return;
+    const slots = targetSlots || [];
+    if (slots.length === 0) return;
 
-    const userSortedTowers = {};
-    users.forEach((u) => {
-      userSortedTowers[u] = uniqueTargetTowers
-        .map((tower) => ({
-          tower,
-          score: getScore(u, tower),
-          meta: TOWER_METADATA[tower] || { state: 'VIC' },
-        }))
-        .sort((a, b) => b.score - a.score);
+    // Count how many times each tower appears in the target slots
+    const slotTowerCounts = {};
+    slots.forEach((t) => {
+      slotTowerCounts[t] = (slotTowerCounts[t] || 0) + 1;
     });
 
-    const lockedTowersSet = new Set(Object.values(manualLocks).filter(Boolean));
+    // Validate manual locks: ensure no tower is locked more times than it exists in slots
+    const validManualLocks = {};
+    const lockedTowerCounts = {};
+    users.forEach((u) => {
+      const locked = manualLocks[u];
+      if (locked) {
+        lockedTowerCounts[locked] = (lockedTowerCounts[locked] || 0) + 1;
+        if (lockedTowerCounts[locked] <= (slotTowerCounts[locked] || 0)) {
+          validManualLocks[u] = locked;
+        }
+      }
+    });
 
     let bestGlobalScore = -Infinity;
     let optimalTopChoiceOptions = [];
 
-    const searchTopChoices = (
+    const searchAssignments = (
       userIndex,
-      currentTopTowers,
-      usedTowers,
+      currentAssignments,
+      usedSlotIndices,
       currentScore,
     ) => {
       if (userIndex === users.length) {
         if (currentScore > bestGlobalScore) {
           bestGlobalScore = currentScore;
-          optimalTopChoiceOptions = [[...currentTopTowers]];
+          optimalTopChoiceOptions = [[...currentAssignments]];
         } else if (currentScore === bestGlobalScore) {
-          optimalTopChoiceOptions.push([...currentTopTowers]);
+          optimalTopChoiceOptions.push([...currentAssignments]);
         }
         return;
       }
 
       const u = users[userIndex];
-      const lockedTower = manualLocks[u];
+      const lockedTower = validManualLocks[u];
 
       if (lockedTower) {
-        const item = userSortedTowers[u].find((t) => t.tower === lockedTower);
-        if (item) {
-          currentTopTowers.push(item);
-          searchTopChoices(
-            userIndex + 1,
-            currentTopTowers,
-            usedTowers,
-            currentScore + item.score,
-          );
-          currentTopTowers.pop();
+        let found = false;
+        for (let sIdx = 0; sIdx < slots.length; sIdx++) {
+          if (!usedSlotIndices.has(sIdx) && slots[sIdx] === lockedTower) {
+            found = true;
+            usedSlotIndices.add(sIdx);
+            const score = getScore(u, lockedTower);
+            currentAssignments.push({
+              slotIndex: sIdx,
+              tower: lockedTower,
+              score,
+            });
+
+            searchAssignments(
+              userIndex + 1,
+              currentAssignments,
+              usedSlotIndices,
+              currentScore + score,
+            );
+
+            currentAssignments.pop();
+            usedSlotIndices.delete(sIdx);
+            break;
+          }
         }
+        if (!found) return;
         return;
       }
 
-      for (const item of userSortedTowers[u]) {
-        if (!usedTowers.has(item.tower)) {
-          usedTowers.add(item.tower);
-          currentTopTowers.push(item);
+      for (let sIdx = 0; sIdx < slots.length; sIdx++) {
+        if (!usedSlotIndices.has(sIdx)) {
+          usedSlotIndices.add(sIdx);
+          const tower = slots[sIdx];
+          const score = getScore(u, tower);
 
-          searchTopChoices(
+          currentAssignments.push({ slotIndex: sIdx, tower, score });
+          searchAssignments(
             userIndex + 1,
-            currentTopTowers,
-            usedTowers,
-            currentScore + item.score,
+            currentAssignments,
+            usedSlotIndices,
+            currentScore + score,
           );
-
-          currentTopTowers.pop();
-          usedTowers.delete(item.tower);
+          currentAssignments.pop();
+          usedSlotIndices.delete(sIdx);
         }
       }
     };
 
-    searchTopChoices(0, [], new Set(lockedTowersSet), 0);
+    searchAssignments(0, [], new Set(), 0);
 
-    const formattedOptions = optimalTopChoiceOptions.map((topChoiceList) => {
+    const formattedOptions = optimalTopChoiceOptions.map((assignmentList) => {
       const assignments = {};
-      users.forEach((u, uIdx) => {
-        const topChoice = topChoiceList[uIdx];
+      assignmentList.forEach((item, idx) => {
+        const u = users[idx];
         assignments[u] = {
-          slotIndex: uIdx,
-          tower: topChoice.tower,
-          score: topChoice.score,
+          slotIndex: item.slotIndex,
+          tower: item.tower,
+          score: item.score,
         };
       });
       return assignments;
@@ -970,9 +991,32 @@ function App() {
                       id={`slot-${sIdx}`}
                       value={slotVal}
                       onChange={(e) => {
+                        const newTower = e.target.value;
                         const newSlots = [...targetSlots];
-                        newSlots[sIdx] = e.target.value;
+                        newSlots[sIdx] = newTower;
                         setTargetSlots(newSlots);
+
+                        // Clean up manual locks that exceed the new frequency count of that tower
+                        setManualLocks((prev) => {
+                          const next = { ...prev };
+                          const counts = {};
+                          newSlots.forEach((t) => {
+                            counts[t] = (counts[t] || 0) + 1;
+                          });
+
+                          // For each locked tower, check if total locks exceed its new count in slots
+                          const activeTowerLocks = {};
+                          Object.entries(next).forEach(([user, tower]) => {
+                            activeTowerLocks[tower] =
+                              (activeTowerLocks[tower] || 0) + 1;
+                            if (
+                              activeTowerLocks[tower] > (counts[tower] || 0)
+                            ) {
+                              delete next[user]; // Release excess lock
+                            }
+                          });
+                          return next;
+                        });
                       }}
                       className='w-full bg-slate-900 text-sky-300 font-bold px-3 py-2 rounded-xl border border-slate-700/80 focus:outline-none focus:border-sky-500 cursor-pointer text-sm shadow-inner'
                     >
@@ -1182,18 +1226,36 @@ function App() {
                             const isThisLocked = currentLock === item.tower;
                             return (
                               <li
-                                key={item.tower}
+                                key={`${item.tower}-${rIdx}`}
                                 onClick={() => {
                                   setManualLocks((prev) => {
                                     const next = { ...prev };
+
                                     if (next[u] === item.tower) {
                                       delete next[u];
                                     } else {
-                                      Object.keys(next).forEach((otherUser) => {
-                                        if (next[otherUser] === item.tower) {
-                                          delete next[otherUser];
-                                        }
-                                      });
+                                      const targetSlotsList = targetSlots || [];
+                                      const maxAllowed = targetSlotsList.filter(
+                                        (t) => t === item.tower,
+                                      ).length;
+
+                                      const otherUsersWithLock = Object.entries(
+                                        next,
+                                      ).filter(
+                                        ([user, tower]) =>
+                                          user !== u && tower === item.tower,
+                                      );
+
+                                      if (
+                                        otherUsersWithLock.length >=
+                                          maxAllowed &&
+                                        maxAllowed > 0
+                                      ) {
+                                        const [userToUnlock] =
+                                          otherUsersWithLock[0];
+                                        delete next[userToUnlock];
+                                      }
+
                                       next[u] = item.tower;
                                     }
                                     return next;
