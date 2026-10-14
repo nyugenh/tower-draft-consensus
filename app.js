@@ -2356,7 +2356,7 @@ function App() {
           aria-labelledby='tab-breakdown'
           className='space-y-6 flex-1'
         >
-          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-10'>
+          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-12'>
             {/* Tower Type Breakdown */}
             <div className='space-y-6'>
               <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800/80 pb-4'>
@@ -2437,32 +2437,27 @@ function App() {
                   return (
                     <div
                       key={cat.category}
-                      className='bg-gradient-to-b from-slate-950/90 to-slate-950/70 border border-slate-800/90 p-5 rounded-3xl flex flex-col shadow-xl transition-all duration-300 hover:border-slate-700 hover:shadow-sky-950/20'
+                      className='bg-gradient-to-b from-slate-950/90 to-slate-950/70 border border-slate-800/90 p-6 rounded-3xl flex flex-col shadow-xl transition-all duration-300 hover:border-slate-700 hover:shadow-sky-950/20'
                     >
-                      {/* Card Header & Average */}
-                      <div className='flex justify-between items-start gap-3 mb-5'>
+                      {/* Card Header & Pill Badge */}
+                      <div className='flex justify-between items-center gap-3 mb-5'>
                         <div className='flex items-center gap-3'>
-                          <span className='w-8 h-8 rounded-2xl bg-sky-500/10 border border-sky-500/20 font-extrabold text-xs text-sky-400 flex items-center justify-center shrink-0 shadow-inner'>
+                          <span className='w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 font-extrabold text-xs text-sky-400 flex items-center justify-center shrink-0 shadow-inner'>
                             #{idx + 1}
                           </span>
-                          <div>
-                            <span className='font-bold text-base text-slate-100 block'>
-                              {cat.category}
-                            </span>
-                            <span className='text-[11px] font-mono text-slate-400'>
-                              {cat.count} {cat.count === 1 ? 'Tower' : 'Towers'}
-                            </span>
-                          </div>
+                          <CategoryBadge category={cat.category} />
                         </div>
-                        <CategoryBadge category={cat.category} />
+                        <span className='text-xs font-mono text-slate-400 font-semibold'>
+                          {cat.count} {cat.count === 1 ? 'Tower' : 'Towers'}
+                        </span>
                       </div>
 
-                      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3.5 mb-5 flex items-center justify-between shadow-inner'>
-                        <span className='text-[11px] font-bold text-slate-400 uppercase tracking-wider'>
+                      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-4 mb-5 flex items-center justify-between shadow-inner'>
+                        <span className='text-xs font-bold text-slate-400 uppercase tracking-wider'>
                           Group Average
                         </span>
                         <div className='flex items-baseline gap-1'>
-                          <span className='font-extrabold text-sky-400 text-lg'>
+                          <span className='font-extrabold text-sky-400 text-xl'>
                             {cat.avg}
                           </span>
                           <span className='text-xs text-slate-500 font-medium'>
@@ -2471,10 +2466,10 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Stat Metrics List */}
-                      <div className='space-y-2.5 text-xs'>
-                        <div className='flex justify-between items-start gap-4 bg-slate-900/30 hover:bg-slate-900/50 transition px-3.5 py-2.5 rounded-xl border border-slate-800/50'>
-                          <span className='text-slate-400 font-medium'>
+                      {/* Stat Metrics List with Matched Font Size and Spacing */}
+                      <div className='space-y-3 text-sm'>
+                        <div className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'>
+                          <span className='text-slate-300 font-medium'>
                             {cat.count === 1 ? 'Tower' : 'Top Pick'}
                           </span>
                           <span className='font-bold text-emerald-400 text-right break-words'>
@@ -2482,8 +2477,8 @@ function App() {
                           </span>
                         </div>
                         {cat.count > 1 && (
-                          <div className='flex justify-between items-start gap-4 bg-slate-900/30 hover:bg-slate-900/50 transition px-3.5 py-2.5 rounded-xl border border-slate-800/50'>
-                            <span className='text-slate-400 font-medium'>
+                          <div className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'>
+                            <span className='text-slate-300 font-medium'>
                               Bottom Pick
                             </span>
                             <span className='font-bold text-rose-400 text-right break-words'>
@@ -2491,16 +2486,16 @@ function App() {
                             </span>
                           </div>
                         )}
-                        <div className='flex justify-between items-start gap-4 bg-slate-900/30 hover:bg-slate-900/50 transition px-3.5 py-2.5 rounded-xl border border-slate-800/50'>
-                          <span className='text-slate-400 font-medium'>
+                        <div className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'>
+                          <span className='text-slate-300 font-medium'>
                             Top Rated
                           </span>
                           <span className='font-bold text-sky-300 text-right break-words'>
                             {topController}
                           </span>
                         </div>
-                        <div className='flex justify-between items-start gap-4 bg-slate-900/30 hover:bg-slate-900/50 transition px-3.5 py-2.5 rounded-xl border border-slate-800/50'>
-                          <span className='text-slate-400 font-medium'>
+                        <div className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'>
+                          <span className='text-slate-300 font-medium'>
                             Bottom Rated
                           </span>
                           <span className='font-bold text-orange-300 text-right break-words'>
@@ -2604,58 +2599,58 @@ function App() {
                           </span>
                           <StateBadge state={st.state} />
                         </div>
-                        <span className='text-[11px] font-mono text-slate-400'>
+                        <span className='text-xs font-mono text-slate-400 font-semibold'>
                           {st.count} {st.count === 1 ? 'Tower' : 'Towers'}
                         </span>
                       </div>
 
-                      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3 mb-4 flex items-center justify-between shadow-inner'>
-                        <span className='text-[11px] font-bold text-slate-400 uppercase tracking-wider'>
+                      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3.5 mb-4 flex items-center justify-between shadow-inner'>
+                        <span className='text-xs font-bold text-slate-400 uppercase tracking-wider'>
                           State Average
                         </span>
                         <div className='flex items-baseline gap-1'>
-                          <span className='font-extrabold text-sky-400 text-base'>
+                          <span className='font-extrabold text-sky-400 text-lg'>
                             {st.avg}
                           </span>
-                          <span className='text-[11px] text-slate-500 font-medium'>
+                          <span className='text-xs text-slate-500 font-medium'>
                             / 5
                           </span>
                         </div>
                       </div>
 
-                      {/* Stat Metrics List */}
+                      {/* Stat Metrics List with 'By' removed */}
                       <div className='space-y-2 text-xs'>
-                        <div className='flex justify-between items-start gap-3 bg-slate-900/30 hover:bg-slate-900/50 transition px-3 py-2 rounded-xl border border-slate-800/50'>
+                        <div className='flex justify-between items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 transition px-3 py-2 rounded-xl border border-slate-800/60'>
                           <span className='text-slate-400 font-medium'>
                             {st.count === 1 ? 'Tower' : 'Top Pick'}
                           </span>
-                          <span className='font-bold text-emerald-400 text-right break-words'>
+                          <span className='font-bold text-emerald-400 text-right truncate'>
                             {st.topTower}
                           </span>
                         </div>
                         {st.count > 1 && (
-                          <div className='flex justify-between items-start gap-3 bg-slate-900/30 hover:bg-slate-900/50 transition px-3 py-2 rounded-xl border border-slate-800/50'>
+                          <div className='flex justify-between items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 transition px-3 py-2 rounded-xl border border-slate-800/60'>
                             <span className='text-slate-400 font-medium'>
                               Bottom Pick
                             </span>
-                            <span className='font-bold text-rose-400 text-right break-words'>
+                            <span className='font-bold text-rose-400 text-right truncate'>
                               {bottomPick}
                             </span>
                           </div>
                         )}
-                        <div className='flex justify-between items-start gap-3 bg-slate-900/30 hover:bg-slate-900/50 transition px-3 py-2 rounded-xl border border-slate-800/50'>
+                        <div className='flex justify-between items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 transition px-3 py-2 rounded-xl border border-slate-800/60'>
                           <span className='text-slate-400 font-medium'>
                             Top Rated
                           </span>
-                          <span className='font-bold text-sky-300 text-right break-words'>
+                          <span className='font-bold text-sky-300 text-right truncate'>
                             {topController}
                           </span>
                         </div>
-                        <div className='flex justify-between items-start gap-3 bg-slate-900/30 hover:bg-slate-900/50 transition px-3 py-2 rounded-xl border border-slate-800/50'>
+                        <div className='flex justify-between items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 transition px-3 py-2 rounded-xl border border-slate-800/60'>
                           <span className='text-slate-400 font-medium'>
                             Bottom Rated
                           </span>
-                          <span className='font-bold text-orange-300 text-right break-words'>
+                          <span className='font-bold text-orange-300 text-right truncate'>
                             {lowestController}
                           </span>
                         </div>
