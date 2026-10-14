@@ -151,6 +151,9 @@ function App() {
   // { id, users: { [controller]: { from, to } } }
   const [tieFlash, setTieFlash] = useState(null);
   const tieFlashTimerRef = useRef(null);
+  // Set to { user, tower } (the form row clicked to lock/unlock), so the next
+  // redraft flashes the towers that move, except the row that was clicked.
+  const lockFlashPendingRef = useRef(null);
 
   // Hot to Not table sorting: key is 'tower', 'avg', or a controller name
   const [matrixSort, setMatrixSort] = useState({ key: 'avg', dir: 'desc' });
@@ -234,6 +237,34 @@ function App() {
     const shuffled = [...ALL_TOWERS].sort(() => 0.5 - Math.random());
     setTargetSlots(shuffled.slice(0, 6));
     setManualLocks({});
+  };
+
+  // Lock/unlock `tower` as controller `u`'s #1. Used by the form guide rows and
+  // the Assigned Placements cards. `fromCard` stops that card flashing itself.
+  const toggleLock = (u, tower, fromCard = false) => {
+    lockFlashPendingRef.current = { user: u, tower, fromCard };
+    setManualLocks((prev) => {
+      const next = { ...prev };
+
+      if (next[u] === tower) {
+        delete next[u];
+      } else {
+        const targetSlotsList = targetSlots || [];
+        const maxAllowed = targetSlotsList.filter((t) => t === tower).length;
+
+        const otherUsersWithLock = Object.entries(next).filter(
+          ([user, lockedTower]) => user !== u && lockedTower === tower,
+        );
+
+        if (otherUsersWithLock.length >= maxAllowed && maxAllowed > 0) {
+          const [userToUnlock] = otherUsersWithLock[0];
+          delete next[userToUnlock];
+        }
+
+        next[u] = tower;
+      }
+      return next;
+    });
   };
 
   const handleSelectTieOption = (idx) => {
@@ -524,6 +555,9 @@ function App() {
 
   // Optimal Draft Permutation Engine with Frequency-Validated Locks
   const runOptimalDraft = () => {
+    const lockClick = lockFlashPendingRef.current;
+    const lockTriggered = lockClick !== null;
+    lockFlashPendingRef.current = null;
     const slots = targetSlots || [];
     if (slots.length === 0) return;
 
@@ -642,7 +676,32 @@ function App() {
       options: nextOptions,
     });
     setSelectedOptionIdx(0);
-    setTieFlash(null);
+
+    // After a lock/unlock, flash whichever controllers' towers changed
+    const changed = {};
+    if (lockTriggered) {
+      const prevOption = draftResult?.options?.[selectedOptionIdx] || {};
+      const nextOption = nextOptions[0] || {};
+      users.forEach((u) => {
+        const from = prevOption[u]?.tower;
+        const to = nextOption[u]?.tower;
+        if (from && to && from !== to) {
+          changed[u] = { from, to };
+          // In the form being clicked, don't flash the clicked tower itself
+          if (u === lockClick.user) {
+            changed[u].skipTower = lockClick.tower;
+            changed[u].skipCard = lockClick.fromCard;
+          }
+        }
+      });
+    }
+    clearTimeout(tieFlashTimerRef.current);
+    if (Object.keys(changed).length > 0) {
+      setTieFlash((prev) => ({ id: (prev?.id || 0) + 1, users: changed }));
+      tieFlashTimerRef.current = setTimeout(() => setTieFlash(null), 2200);
+    } else {
+      setTieFlash(null);
+    }
   };
 
   useEffect(() => {
@@ -1252,13 +1311,28 @@ function App() {
                     return (
                       <div
                         key={u}
-                        className={`relative p-5 rounded-2xl flex justify-between items-center shadow-inner border transition ${
+                        role='button'
+                        tabIndex={0}
+                        aria-pressed={isLocked}
+                        title={`Click to ${isLocked ? 'unlock' : 'lock'} ${assignment.tower} for ${u}`}
+                        onClick={() =>
+                          assignment.tower &&
+                          toggleLock(u, assignment.tower, true)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (assignment.tower)
+                              toggleLock(u, assignment.tower, true);
+                          }
+                        }}
+                        className={`relative p-5 rounded-2xl flex justify-between items-center shadow-inner border transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                           isLocked
                             ? 'bg-emerald-950/40 border-emerald-500/80 ring-1 ring-emerald-500/40'
-                            : 'bg-slate-950/80 border-slate-800/80'
-                        } ${flashInfo ? `tie-flash-${tieFlash.id % 2}` : ''}`}
+                            : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-600'
+                        } ${flashInfo && !flashInfo.skipCard ? `tie-flash-${tieFlash.id % 2}` : ''}`}
                       >
-                        {flashInfo && (
+                        {flashInfo && !flashInfo.skipCard && (
                           <span className='absolute -top-2.5 right-4 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-950 border border-amber-500/70 text-amber-300 shadow-md'>
                             was {flashInfo.from}
                           </span>
@@ -1364,45 +1438,13 @@ function App() {
                             const flashInfo = tieFlash?.users?.[u];
                             const isFlashRow =
                               flashInfo &&
+                              item.tower !== flashInfo.skipTower &&
                               (item.tower === flashInfo.to ||
                                 item.tower === flashInfo.from);
                             return (
                               <li
                                 key={`${item.tower}-${rIdx}`}
-                                onClick={() => {
-                                  setManualLocks((prev) => {
-                                    const next = { ...prev };
-
-                                    if (next[u] === item.tower) {
-                                      delete next[u];
-                                    } else {
-                                      const targetSlotsList = targetSlots || [];
-                                      const maxAllowed = targetSlotsList.filter(
-                                        (t) => t === item.tower,
-                                      ).length;
-
-                                      const otherUsersWithLock = Object.entries(
-                                        next,
-                                      ).filter(
-                                        ([user, tower]) =>
-                                          user !== u && tower === item.tower,
-                                      );
-
-                                      if (
-                                        otherUsersWithLock.length >=
-                                          maxAllowed &&
-                                        maxAllowed > 0
-                                      ) {
-                                        const [userToUnlock] =
-                                          otherUsersWithLock[0];
-                                        delete next[userToUnlock];
-                                      }
-
-                                      next[u] = item.tower;
-                                    }
-                                    return next;
-                                  });
-                                }}
+                                onClick={() => toggleLock(u, item.tower)}
                                 title={`Click to lock ${item.tower} as #1 for ${u}`}
                                 className={`flex flex-wrap items-center justify-between gap-y-1.5 text-xs px-3 py-2 rounded-xl border transition cursor-pointer ${isFlashRow ? `tie-flash-${tieFlash.id % 2}` : ''} ${
                                   isThisLocked
