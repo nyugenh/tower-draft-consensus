@@ -128,6 +128,7 @@ function App() {
 
   const cancelButtonRef = useRef(null);
   const isSavingRef = useRef(false);
+  const lastDraftKeyRef = useRef(null);
 
   // Default Target List Slots (6 slots, allowing duplicates)
   const [targetSlots, setTargetSlots] = useState([
@@ -141,6 +142,11 @@ function App() {
 
   const [draftResult, setDraftResult] = useState(null);
   const [selectedOptionIdx, setSelectedOptionIdx] = useState(0);
+
+  // Briefly highlights what changed when switching between tied options:
+  // { id, users: { [controller]: { from, to } } }
+  const [tieFlash, setTieFlash] = useState(null);
+  const tieFlashTimerRef = useRef(null);
 
   // Manual Locks State: { [user]: towerName }
   const [manualLocks, setManualLocks] = useState({});
@@ -192,11 +198,11 @@ function App() {
           cloudData &&
           typeof cloudData === 'object'
         ) {
-          setRatings(cloudData);
-          localStorage.setItem(
-            'atc_tower_rankings_gsheet',
-            JSON.stringify(cloudData),
-          );
+          const cloudJson = JSON.stringify(cloudData);
+          if (cloudJson !== localStorage.getItem('atc_tower_rankings_gsheet')) {
+            setRatings(cloudData);
+            localStorage.setItem('atc_tower_rankings_gsheet', cloudJson);
+          }
           setSyncStatus('Synced');
         }
       } else {
@@ -221,6 +227,22 @@ function App() {
     const shuffled = [...ALL_TOWERS].sort(() => 0.5 - Math.random());
     setTargetSlots(shuffled.slice(0, 6));
     setManualLocks({});
+  };
+
+  const handleSelectTieOption = (idx) => {
+    if (!draftResult || idx === selectedOptionIdx) return;
+    const prevOption = draftResult.options[selectedOptionIdx] || {};
+    const nextOption = draftResult.options[idx] || {};
+    const changed = {};
+    users.forEach((u) => {
+      const from = prevOption[u]?.tower;
+      const to = nextOption[u]?.tower;
+      if (from && to && from !== to) changed[u] = { from, to };
+    });
+    setSelectedOptionIdx(idx);
+    clearTimeout(tieFlashTimerRef.current);
+    setTieFlash({ id: (tieFlash?.id || 0) + 1, users: changed });
+    tieFlashTimerRef.current = setTimeout(() => setTieFlash(null), 2200);
   };
 
   const handleRatingChange = async (tower, score) => {
@@ -536,12 +558,18 @@ function App() {
       return assignments;
     });
 
+    const nextOptions = formattedOptions.length > 0 ? formattedOptions : [{}];
+    const draftKey = JSON.stringify([bestGlobalScore, nextOptions]);
+    if (draftKey === lastDraftKeyRef.current) return;
+    lastDraftKeyRef.current = draftKey;
+
     setDraftResult({
       totalScore: bestGlobalScore,
       averageScore: (bestGlobalScore / users.length).toFixed(2),
-      options: formattedOptions.length > 0 ? formattedOptions : [{}],
+      options: nextOptions,
     });
     setSelectedOptionIdx(0);
+    setTieFlash(null);
   };
 
   useEffect(() => {
@@ -1052,7 +1080,7 @@ function App() {
                       {draftResult.options.map((_, idx) => (
                         <button
                           key={idx}
-                          onClick={() => setSelectedOptionIdx(idx)}
+                          onClick={() => handleSelectTieOption(idx)}
                           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition duration-150 whitespace-nowrap shrink-0 ${
                             selectedOptionIdx === idx
                               ? 'bg-sky-600 text-white shadow-md'
@@ -1071,22 +1099,21 @@ function App() {
                 </div>
 
                 {/* Clear Locks Button Area (Inline when no tied options, wraps/aligns when tied options are present) */}
-                {Object.keys(manualLocks).length > 0 && (
-                  <div
-                    className={`flex items-center min-h-[36px] shrink-0 ${draftResult.options.length > 1 ? 'w-full sm:w-auto justify-end' : ''}`}
+                <div
+                  className={`flex items-center min-h-[36px] shrink-0 w-full sm:w-auto justify-end ${Object.keys(manualLocks).length > 0 ? '' : 'invisible'}`}
+                >
+                  <button
+                    onClick={() => setManualLocks({})}
+                    disabled={Object.keys(manualLocks).length === 0}
+                    className='px-3.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md whitespace-nowrap'
                   >
-                    <button
-                      onClick={() => setManualLocks({})}
-                      className='px-3.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md whitespace-nowrap'
-                    >
-                      Clear Locks ({Object.keys(manualLocks).length})
-                    </button>
-                  </div>
-                )}
+                    Clear Locks ({Object.keys(manualLocks).length})
+                  </button>
+                </div>
               </div>
 
               <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800/80 pb-4'>
-                <div>
+                <div className='min-h-[3rem]'>
                   <h3 className='text-xl font-bold text-slate-100'>
                     Optimal Placement Results
                   </h3>
@@ -1125,15 +1152,21 @@ function App() {
                       state: 'VIC',
                     };
                     const isLocked = manualLocks[u] === assignment.tower;
+                    const flashInfo = tieFlash?.users?.[u];
                     return (
                       <div
                         key={u}
-                        className={`p-5 rounded-2xl flex justify-between items-center shadow-inner border transition ${
+                        className={`relative p-5 rounded-2xl flex justify-between items-center shadow-inner border transition ${
                           isLocked
                             ? 'bg-emerald-950/40 border-emerald-500/80 ring-1 ring-emerald-500/40'
                             : 'bg-slate-950/80 border-slate-800/80'
-                        }`}
+                        } ${flashInfo ? `tie-flash-${tieFlash.id % 2}` : ''}`}
                       >
+                        {flashInfo && (
+                          <span className='absolute -top-2.5 right-4 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-950 border border-amber-500/70 text-amber-300 shadow-md'>
+                            was {flashInfo.from}
+                          </span>
+                        )}
                         <div>
                           <span className='text-xs text-slate-400 block font-semibold'>
                             Controller
@@ -1232,6 +1265,11 @@ function App() {
                         <ol className='space-y-2 pt-1'>
                           {items.map((item, rIdx) => {
                             const isThisLocked = currentLock === item.tower;
+                            const flashInfo = tieFlash?.users?.[u];
+                            const isFlashRow =
+                              flashInfo &&
+                              (item.tower === flashInfo.to ||
+                                item.tower === flashInfo.from);
                             return (
                               <li
                                 key={`${item.tower}-${rIdx}`}
@@ -1270,7 +1308,7 @@ function App() {
                                   });
                                 }}
                                 title={`Click to lock ${item.tower} as #1 for ${u}`}
-                                className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl border transition cursor-pointer ${
+                                className={`flex flex-wrap items-center justify-between gap-y-1.5 text-xs px-3 py-2 rounded-xl border transition cursor-pointer ${isFlashRow ? `tie-flash-${tieFlash.id % 2}` : ''} ${
                                   isThisLocked
                                     ? 'bg-emerald-950/50 border-emerald-500/70 text-emerald-200 font-bold shadow-sm ring-1 ring-emerald-500/40'
                                     : rIdx === 0
@@ -1289,6 +1327,11 @@ function App() {
                                   <span>{item.tower}</span>
                                 </div>
                                 <div className='flex items-center gap-2'>
+                                  {item.meta?.category && (
+                                    <CategoryBadge
+                                      category={item.meta.category}
+                                    />
+                                  )}
                                   <StateBadge state={item.meta?.state} />
                                   <span className='font-mono text-slate-400 text-[11px]'>
                                     {item.score}/5
@@ -1538,47 +1581,74 @@ function App() {
                 </div>
               </div>
 
-              {/* Card 4: The Wild Card */}
-              <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-400 flex items-center justify-center font-bold text-lg'>
-                    🃏
-                  </div>
-                  <div>
-                    <h3 className='font-bold text-slate-100 text-sm'>
-                      The Wild Card
-                    </h3>
-                    <p className='text-[11px] text-slate-400'>
-                      Most erratic score spread
-                    </p>
-                  </div>
-                </div>
-                <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                  <div>
-                    <span className='font-bold text-base text-sky-300'>
-                      {mostPolarized ? mostPolarized.tower : 'N/A'}
-                    </span>
-                    <div className='flex items-center gap-1.5 mt-1'>
-                      {mostPolarized && (
-                        <CategoryBadge category={mostPolarized.category} />
-                      )}
-                      {mostPolarized && (
-                        <StateBadge state={mostPolarized.state} />
-                      )}
+              {/* Card 4: Rating Twins (most similar pair of controllers) */}
+              {(() => {
+                let twins = null;
+                for (let i = 0; i < users.length; i++) {
+                  for (let j = i + 1; j < users.length; j++) {
+                    let shared = 0;
+                    let exact = 0;
+                    let gapTotal = 0;
+                    ALL_TOWERS.forEach((t) => {
+                      const x = ratings[users[i]]?.[t];
+                      const y = ratings[users[j]]?.[t];
+                      if (x > 0 && y > 0) {
+                        shared++;
+                        gapTotal += Math.abs(x - y);
+                        if (x === y) exact++;
+                      }
+                    });
+                    // Need a meaningful overlap before calling anyone twins
+                    if (shared < 5) continue;
+                    const gap = gapTotal / shared;
+                    if (
+                      !twins ||
+                      gap < twins.gap ||
+                      (gap === twins.gap && shared > twins.shared)
+                    ) {
+                      twins = { a: users[i], b: users[j], gap, shared, exact };
+                    }
+                  }
+                }
+
+                return (
+                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-400 flex items-center justify-center font-bold text-lg'>
+                        👯
+                      </div>
+                      <div>
+                        <h3 className='font-bold text-slate-100 text-sm'>
+                          The Rating Twins
+                        </h3>
+                        <p className='text-[11px] text-slate-400'>
+                          Two controllers who think most alike
+                        </p>
+                      </div>
+                    </div>
+                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                      <div>
+                        <span className='font-bold text-base text-sky-300'>
+                          {twins ? `${twins.a} & ${twins.b}` : 'N/A'}
+                        </span>
+                        <span className='text-xs text-slate-400 block mt-0.5'>
+                          {twins
+                            ? `${twins.exact} of ${twins.shared} shared towers matched exactly`
+                            : 'Needs 5+ towers rated by two controllers'}
+                        </span>
+                      </div>
+                      <div className='text-right'>
+                        <span className='text-[10px] text-slate-400 block font-semibold'>
+                          Avg Gap
+                        </span>
+                        <span className='font-mono text-teal-400 font-extrabold text-sm'>
+                          {twins ? twins.gap.toFixed(2) : '0.00'} pts
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className='text-right'>
-                    <span className='text-[10px] text-slate-400 block font-semibold'>
-                      Spread
-                    </span>
-                    <span className='font-mono text-teal-400 font-extrabold text-sm'>
-                      {mostPolarized
-                        ? `${Math.max(...Object.values(mostPolarized.scoresMap)) - Math.min(...Object.values(mostPolarized.scoresMap).filter((s) => s > 0))} pts`
-                        : '0 pts'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Card 5: Controller MVP (Optimist) */}
               {(() => {

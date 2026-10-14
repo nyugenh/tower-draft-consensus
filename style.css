@@ -59,3 +59,48 @@ input:focus-visible {
   outline: 2px solid #38bdf8; /* Sky 400 */
   outline-offset: 2px;
 }
+
+/* Tied-option change highlight (Draft Pick). Two identical keyframes so the
+   animation restarts when switching options in quick succession. */
+@keyframes tie-change-flash {
+  0% {
+    background-color: rgba(251, 191, 36, 0.25);
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0.9),
+      0 0 18px rgba(251, 191, 36, 0.45);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0),
+      0 0 18px rgba(251, 191, 36, 0);
+  }
+}
+
+@keyframes tie-change-flash-b {
+  0% {
+    background-color: rgba(251, 191, 36, 0.25);
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0.9),
+      0 0 18px rgba(251, 191, 36, 0.45);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0),
+      0 0 18px rgba(251, 191, 36, 0);
+  }
+}
+
+.tie-flash-0 {
+  animation: tie-change-flash 1.8s ease-out;
+}
+
+.tie-flash-1 {
+  animation: tie-change-flash-b 1.8s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tie-flash-0,
+  .tie-flash-1 {
+    animation-duration: 0.01ms;
+  }
+}
