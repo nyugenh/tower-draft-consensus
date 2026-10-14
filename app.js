@@ -148,6 +148,9 @@ function App() {
   const [tieFlash, setTieFlash] = useState(null);
   const tieFlashTimerRef = useRef(null);
 
+  // Hot to Not table sorting: key is 'tower', 'avg', or a controller name
+  const [matrixSort, setMatrixSort] = useState({ key: 'avg', dir: 'desc' });
+
   // Manual Locks State: { [user]: towerName }
   const [manualLocks, setManualLocks] = useState({});
 
@@ -374,12 +377,14 @@ function App() {
         scores.push(DEFAULT_SCORE);
       }
     });
-    const avg = total / users.length;
+    // Unrated (0) scores are left out: averages and variance only use real ratings
+    const ratedScores = scores.filter((v) => v > 0);
+    const avg = explicitCount > 0 ? total / explicitCount : 0;
     let variance = 0;
-    if (scores.length > 1) {
+    if (ratedScores.length > 1) {
       variance =
-        scores.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) /
-        scores.length;
+        ratedScores.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) /
+        ratedScores.length;
     }
 
     const meta = TOWER_METADATA[tower];
@@ -400,16 +405,60 @@ function App() {
     };
   });
 
-  const sortedOverall = [...towerMetrics].sort((a, b) => b.rawAvg - a.rawAvg);
+  // Hot to Not rows in the user's chosen sort order (unrated always sinks to the bottom)
+  const matrixRows = [...towerMetrics].sort((a, b) => {
+    const { key, dir } = matrixSort;
+    if (key === 'tower') {
+      const c = a.tower.localeCompare(b.tower);
+      return dir === 'asc' ? c : -c;
+    }
+    const valueOf = (m) => {
+      if (key === 'avg') return m.ratingsCount > 0 ? m.rawAvg : null;
+      return m.scoresMap[key] > 0 ? m.scoresMap[key] : null;
+    };
+    const va = valueOf(a);
+    const vb = valueOf(b);
+    if (va === null && vb === null) return a.tower.localeCompare(b.tower);
+    if (va === null) return 1;
+    if (vb === null) return -1;
+    if (va !== vb) return dir === 'asc' ? va - vb : vb - va;
+    return (
+      b.rawAvg - a.rawAvg ||
+      b.ratingsCount - a.ratingsCount ||
+      a.tower.localeCompare(b.tower)
+    );
+  });
+
+  const handleMatrixSort = (key) => {
+    setMatrixSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'tower' ? 'asc' : 'desc' },
+    );
+  };
+
+  const matrixAriaSort = (key) =>
+    matrixSort.key === key
+      ? matrixSort.dir === 'asc'
+        ? 'ascending'
+        : 'descending'
+      : 'none';
+
+  const matrixSortIcon = (key) =>
+    matrixSort.key === key ? (matrixSort.dir === 'asc' ? '▲' : '▼') : '↕';
 
   // Compute Category & State Aggregates
   const categoriesList = ['Radar', 'Regional', 'Metro D'];
   const categoryStats = categoriesList
     .map((cat) => {
       const items = towerMetrics.filter((m) => m.category === cat);
+      const ratedItems = items.filter((m) => m.ratingsCount > 0);
       const totalAvg =
-        items.reduce((sum, item) => sum + item.rawAvg, 0) / (items.length || 1);
-      const topTower = [...items].sort((a, b) => b.rawAvg - a.rawAvg)[0];
+        ratedItems.reduce((sum, item) => sum + item.rawAvg, 0) /
+        (ratedItems.length || 1);
+      const topTower = [...ratedItems].sort(
+        (a, b) => b.rawAvg - a.rawAvg || b.ratingsCount - a.ratingsCount,
+      )[0];
       return {
         category: cat,
         count: items.length,
@@ -423,13 +472,17 @@ function App() {
   const stateStats = statesList
     .map((st) => {
       const items = towerMetrics.filter((m) => m.state === st);
+      const ratedItems = items.filter((m) => m.ratingsCount > 0);
       const totalAvg =
-        items.length > 0
-          ? items.reduce((sum, item) => sum + item.rawAvg, 0) / items.length
+        ratedItems.length > 0
+          ? ratedItems.reduce((sum, item) => sum + item.rawAvg, 0) /
+            ratedItems.length
           : 0;
       const topTower =
-        items.length > 0
-          ? [...items].sort((a, b) => b.rawAvg - a.rawAvg)[0]
+        ratedItems.length > 0
+          ? [...ratedItems].sort(
+              (a, b) => b.rawAvg - a.rawAvg || b.ratingsCount - a.ratingsCount,
+            )[0]
           : null;
       return {
         state: st,
@@ -441,12 +494,18 @@ function App() {
     .sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg));
 
   // Trivia Insights Derivation
-  const mostPolarized = [...towerMetrics].sort(
-    (a, b) => b.variance - a.variance,
+  // Only towers with real ratings can win a superlative (disagreement needs 2+)
+  const ratedTowers = towerMetrics.filter((m) => m.ratingsCount > 0);
+  const mostPolarized = towerMetrics
+    .filter((m) => m.ratingsCount >= 2)
+    .sort(
+      (a, b) => b.variance - a.variance || b.ratingsCount - a.ratingsCount,
+    )[0];
+  const crowdPleaser = [...ratedTowers].sort(
+    (a, b) => b.rawAvg - a.rawAvg || b.ratingsCount - a.ratingsCount,
   )[0];
-  const crowdPleaser = [...towerMetrics].sort((a, b) => b.rawAvg - a.rawAvg)[0];
-  const avoidanceZone = [...towerMetrics].sort(
-    (a, b) => a.rawAvg - b.rawAvg,
+  const avoidanceZone = [...ratedTowers].sort(
+    (a, b) => a.rawAvg - b.rawAvg || b.ratingsCount - a.ratingsCount,
   )[0];
 
   // Optimal Draft Permutation Engine with Frequency-Validated Locks
@@ -1364,8 +1423,8 @@ function App() {
               🔥 Hot to Not Score Matrix
             </h2>
             <p className='text-sm text-slate-300'>
-              Color-coded controller preference matrix ranked from highest team
-              average down to lowest (* = unrated default 0).
+              Color-coded controller preference matrix. Click any column header
+              to sort (— = unrated, not counted, and always listed last).
             </p>
           </div>
 
@@ -1375,29 +1434,65 @@ function App() {
                 <tr className='sticky top-0 z-30 bg-slate-900 text-slate-300 text-sm shadow-md'>
                   <th
                     scope='col'
+                    aria-sort={matrixAriaSort('tower')}
                     className='py-3.5 px-4 font-bold bg-slate-900 border-b border-slate-800'
                   >
-                    Tower
+                    <button
+                      onClick={() => handleMatrixSort('tower')}
+                      className='inline-flex items-center gap-1.5 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-md px-1 -mx-1'
+                    >
+                      Tower
+                      <span
+                        aria-hidden='true'
+                        className={`text-[10px] ${matrixSort.key === 'tower' ? 'text-sky-400' : 'text-slate-500'}`}
+                      >
+                        {matrixSortIcon('tower')}
+                      </span>
+                    </button>
                   </th>
                   {users.map((u) => (
                     <th
                       key={u}
                       scope='col'
+                      aria-sort={matrixAriaSort(u)}
                       className='py-3.5 px-4 text-center font-bold bg-slate-900 border-b border-slate-800'
                     >
-                      {u}
+                      <button
+                        onClick={() => handleMatrixSort(u)}
+                        className='inline-flex items-center gap-1.5 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-md px-1 -mx-1'
+                      >
+                        {u}
+                        <span
+                          aria-hidden='true'
+                          className={`text-[10px] ${matrixSort.key === u ? 'text-sky-400' : 'text-slate-500'}`}
+                        >
+                          {matrixSortIcon(u)}
+                        </span>
+                      </button>
                     </th>
                   ))}
                   <th
                     scope='col'
+                    aria-sort={matrixAriaSort('avg')}
                     className='py-3.5 px-4 text-center font-bold text-sky-400 bg-slate-900 border-b border-slate-800'
                   >
-                    Average
+                    <button
+                      onClick={() => handleMatrixSort('avg')}
+                      className='inline-flex items-center gap-1.5 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-md px-1 -mx-1'
+                    >
+                      Average
+                      <span
+                        aria-hidden='true'
+                        className={`text-[10px] ${matrixSort.key === 'avg' ? 'text-sky-400' : 'text-slate-500'}`}
+                      >
+                        {matrixSortIcon('avg')}
+                      </span>
+                    </button>
                   </th>
                 </tr>
               </thead>
               <tbody className='divide-y divide-slate-800/60'>
-                {sortedOverall.map((stats) => (
+                {matrixRows.map((stats) => (
                   <tr
                     key={stats.tower}
                     className='hover:bg-slate-950/50 transition'
@@ -1424,14 +1519,13 @@ function App() {
                           <span
                             className={`inline-block w-9 h-9 leading-9 rounded-xl font-bold text-sm ${getHeatmapClass(score)}`}
                           >
-                            {score}
-                            {!isExplicit && '*'}
+                            {isExplicit ? score : '—'}
                           </span>
                         </td>
                       );
                     })}
                     <td className='py-3.5 px-4 text-center font-extrabold text-sky-400 text-base'>
-                      {stats.avg}
+                      {stats.ratingsCount > 0 ? stats.avg : '—'}
                     </td>
                   </tr>
                 ))}
