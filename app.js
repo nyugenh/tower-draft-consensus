@@ -119,6 +119,10 @@ function App() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [showResetModal, setShowResetModal] = useState(false);
 
+  // Hot to Not Table Search & Filter State
+  const [matrixSearch, setMatrixSearch] = useState('');
+  const [matrixCategoryFilter, setMatrixCategoryFilter] = useState('All');
+
   // Icon-Only Toast Notification State
   const [saveToast, setSaveToast] = useState({
     visible: false,
@@ -405,29 +409,46 @@ function App() {
     };
   });
 
-  // Hot to Not rows in the user's chosen sort order (unrated always sinks to the bottom)
-  const matrixRows = [...towerMetrics].sort((a, b) => {
-    const { key, dir } = matrixSort;
-    if (key === 'tower') {
-      const c = a.tower.localeCompare(b.tower);
-      return dir === 'asc' ? c : -c;
-    }
-    const valueOf = (m) => {
-      if (key === 'avg') return m.ratingsCount > 0 ? m.rawAvg : null;
-      return m.scoresMap[key] > 0 ? m.scoresMap[key] : null;
-    };
-    const va = valueOf(a);
-    const vb = valueOf(b);
-    if (va === null && vb === null) return a.tower.localeCompare(b.tower);
-    if (va === null) return 1;
-    if (vb === null) return -1;
-    if (va !== vb) return dir === 'asc' ? va - vb : vb - va;
-    return (
-      b.rawAvg - a.rawAvg ||
-      b.ratingsCount - a.ratingsCount ||
-      a.tower.localeCompare(b.tower)
-    );
-  });
+  // Hot to Not rows with search & category filtering applied
+  const matrixRows = [...towerMetrics]
+    .filter((stats) => {
+      if (
+        matrixCategoryFilter !== 'All' &&
+        stats.category !== matrixCategoryFilter
+      ) {
+        return false;
+      }
+      if (matrixSearch) {
+        const query = matrixSearch.toLowerCase();
+        const matchName = stats.tower.toLowerCase().includes(query);
+        const matchState = stats.state.toLowerCase().includes(query);
+        const matchCat = stats.category.toLowerCase().includes(query);
+        if (!matchName && !matchState && !matchCat) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const { key, dir } = matrixSort;
+      if (key === 'tower') {
+        const c = a.tower.localeCompare(b.tower);
+        return dir === 'asc' ? c : -c;
+      }
+      const valueOf = (m) => {
+        if (key === 'avg') return m.ratingsCount > 0 ? m.rawAvg : null;
+        return m.scoresMap[key] > 0 ? m.scoresMap[key] : null;
+      };
+      const va = valueOf(a);
+      const vb = valueOf(b);
+      if (va === null && vb === null) return a.tower.localeCompare(b.tower);
+      if (va === null) return 1;
+      if (vb === null) return -1;
+      if (va !== vb) return dir === 'asc' ? va - vb : vb - va;
+      return (
+        b.rawAvg - a.rawAvg ||
+        b.ratingsCount - a.ratingsCount ||
+        a.tower.localeCompare(b.tower)
+      );
+    });
 
   const handleMatrixSort = (key) => {
     setMatrixSort((prev) =>
@@ -494,19 +515,12 @@ function App() {
     .sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg));
 
   // Trivia Insights Derivation
-  // Only towers with real ratings can win a superlative (disagreement needs 2+)
   const ratedTowers = towerMetrics.filter((m) => m.ratingsCount > 0);
   const mostPolarized = towerMetrics
     .filter((m) => m.ratingsCount >= 2)
     .sort(
       (a, b) => b.variance - a.variance || b.ratingsCount - a.ratingsCount,
     )[0];
-  const crowdPleaser = [...ratedTowers].sort(
-    (a, b) => b.rawAvg - a.rawAvg || b.ratingsCount - a.ratingsCount,
-  )[0];
-  const avoidanceZone = [...ratedTowers].sort(
-    (a, b) => a.rawAvg - b.rawAvg || b.ratingsCount - a.ratingsCount,
-  )[0];
 
   // Optimal Draft Permutation Engine with Frequency-Validated Locks
   const runOptimalDraft = () => {
@@ -1048,7 +1062,7 @@ function App() {
                   onClick={handleRandomiseSlots}
                   className='px-4 py-2.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-md'
                 >
-                  🎲 Random 6 Towers
+                  🎲 Randomise 6 Towers
                 </button>
               </div>
             </div>
@@ -1416,121 +1430,170 @@ function App() {
           id='panel-hot-to-not'
           role='tabpanel'
           aria-labelledby='tab-hot-to-not'
-          className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl flex-1 flex flex-col'
+          className='space-y-6 flex-1 flex flex-col'
         >
-          <div className='mb-4 shrink-0'>
-            <h2 className='text-xl font-bold text-slate-100 mb-1'>
-              🔥 Hot to Not Score Matrix
-            </h2>
-            <p className='text-sm text-slate-300'>
-              Color-coded controller preference matrix. Click any column header
-              to sort (— = unrated, not counted, and always listed last).
-            </p>
-          </div>
+          <div className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl flex-1 flex flex-col'>
+            <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6'>
+              <div>
+                <h2 className='text-xl font-bold text-slate-100 mb-1'>
+                  🔥 Hot to Not Score Matrix
+                </h2>
+                <p className='text-sm text-slate-300'>
+                  Colour-coded controller preference matrix. Click any column
+                  header to sort.
+                </p>
+              </div>
+            </div>
 
-          <div className='relative overflow-x-auto overflow-y-auto max-h-[620px] rounded-2xl border border-slate-800/80 shadow-inner'>
-            <table className='w-full text-left border-collapse min-w-[650px]'>
-              <thead>
-                <tr className='sticky top-0 z-30 bg-slate-900 text-slate-300 text-sm shadow-md'>
-                  <th
-                    scope='col'
-                    aria-sort={matrixAriaSort('tower')}
-                    className='py-3.5 px-4 font-bold bg-slate-900 border-b border-slate-800'
+            {/* Search & Category Filter Toolbar */}
+            <div className='bg-slate-950/80 p-4 rounded-2xl border border-slate-800/80 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-inner'>
+              <div
+                className='flex flex-wrap gap-2 w-full sm:w-auto'
+                role='group'
+                aria-label='Matrix Category Filters'
+              >
+                {['All', 'Radar', 'Regional', 'Metro D'].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setMatrixCategoryFilter(cat)}
+                    aria-pressed={matrixCategoryFilter === cat}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition duration-200 ${
+                      matrixCategoryFilter === cat
+                        ? 'bg-sky-600 text-white shadow-md shadow-sky-950'
+                        : 'bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800'
+                    }`}
                   >
-                    <button
-                      onClick={() => handleMatrixSort('tower')}
-                      className='inline-flex items-center gap-1.5 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-md px-1 -mx-1'
-                    >
-                      Tower
-                      <span
-                        aria-hidden='true'
-                        className={`text-[10px] ${matrixSort.key === 'tower' ? 'text-sky-400' : 'text-slate-500'}`}
-                      >
-                        {matrixSortIcon('tower')}
-                      </span>
-                    </button>
-                  </th>
-                  {users.map((u) => (
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <label className='w-full sm:w-auto flex items-center'>
+                <span className='sr-only'>Search matrix towers</span>
+                <input
+                  type='text'
+                  placeholder='Search tower, state, type...'
+                  value={matrixSearch}
+                  onChange={(e) => setMatrixSearch(e.target.value)}
+                  className='bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 w-full sm:w-64 shadow-inner'
+                />
+              </label>
+            </div>
+
+            <div className='relative overflow-x-auto overflow-y-auto max-h-[550px] rounded-2xl border border-slate-800/80 shadow-inner'>
+              <table className='w-full text-left border-collapse min-w-[650px]'>
+                <thead>
+                  <tr className='sticky top-0 z-30 bg-slate-900 text-slate-300 text-sm shadow-md'>
                     <th
-                      key={u}
                       scope='col'
-                      aria-sort={matrixAriaSort(u)}
-                      className='py-3.5 px-4 text-center font-bold bg-slate-900 border-b border-slate-800'
+                      aria-sort={matrixAriaSort('tower')}
+                      className='py-3.5 px-4 font-bold bg-slate-900 border-b border-slate-800'
                     >
                       <button
-                        onClick={() => handleMatrixSort(u)}
+                        onClick={() => handleMatrixSort('tower')}
                         className='inline-flex items-center gap-1.5 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-md px-1 -mx-1'
                       >
-                        {u}
+                        Tower
                         <span
                           aria-hidden='true'
-                          className={`text-[10px] ${matrixSort.key === u ? 'text-sky-400' : 'text-slate-500'}`}
+                          className={`text-[10px] ${matrixSort.key === 'tower' ? 'text-sky-400' : 'text-slate-500'}`}
                         >
-                          {matrixSortIcon(u)}
+                          {matrixSortIcon('tower')}
                         </span>
                       </button>
                     </th>
-                  ))}
-                  <th
-                    scope='col'
-                    aria-sort={matrixAriaSort('avg')}
-                    className='py-3.5 px-4 text-center font-bold text-sky-400 bg-slate-900 border-b border-slate-800'
-                  >
-                    <button
-                      onClick={() => handleMatrixSort('avg')}
-                      className='inline-flex items-center gap-1.5 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-md px-1 -mx-1'
-                    >
-                      Average
-                      <span
-                        aria-hidden='true'
-                        className={`text-[10px] ${matrixSort.key === 'avg' ? 'text-sky-400' : 'text-slate-500'}`}
+                    {users.map((u) => (
+                      <th
+                        key={u}
+                        scope='col'
+                        aria-sort={matrixAriaSort(u)}
+                        className='py-3.5 px-4 text-center font-bold bg-slate-900 border-b border-slate-800'
                       >
-                        {matrixSortIcon('avg')}
-                      </span>
-                    </button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-slate-800/60'>
-                {matrixRows.map((stats) => (
-                  <tr
-                    key={stats.tower}
-                    className='hover:bg-slate-950/50 transition'
-                  >
-                    <th scope='row' className='py-3.5 px-4 font-normal'>
-                      <div className='flex items-center gap-2.5'>
-                        <span className='font-bold text-slate-100'>
-                          {stats.tower}
-                        </span>
-                        <CategoryBadge category={stats.category} />
-                        <StateBadge state={stats.state} />
-                      </div>
-                    </th>
-                    {users.map((u) => {
-                      const score =
-                        ratings[u]?.[stats.tower] !== undefined
-                          ? ratings[u][stats.tower]
-                          : DEFAULT_SCORE;
-                      const isExplicit =
-                        ratings[u]?.[stats.tower] !== undefined &&
-                        ratings[u][stats.tower] > 0;
-                      return (
-                        <td key={u} className='py-3.5 px-4 text-center'>
+                        <button
+                          onClick={() => handleMatrixSort(u)}
+                          className='inline-flex items-center gap-1.5 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-md px-1 -mx-1'
+                        >
+                          {u}
                           <span
-                            className={`inline-block w-9 h-9 leading-9 rounded-xl font-bold text-sm ${getHeatmapClass(score)}`}
+                            aria-hidden='true'
+                            className={`text-[10px] ${matrixSort.key === u ? 'text-sky-400' : 'text-slate-500'}`}
                           >
-                            {isExplicit ? score : '—'}
+                            {matrixSortIcon(u)}
                           </span>
-                        </td>
-                      );
-                    })}
-                    <td className='py-3.5 px-4 text-center font-extrabold text-sky-400 text-base'>
-                      {stats.ratingsCount > 0 ? stats.avg : '—'}
-                    </td>
+                        </button>
+                      </th>
+                    ))}
+                    <th
+                      scope='col'
+                      aria-sort={matrixAriaSort('avg')}
+                      className='py-3.5 px-4 text-center font-bold text-sky-400 bg-slate-900 border-b border-slate-800'
+                    >
+                      <button
+                        onClick={() => handleMatrixSort('avg')}
+                        className='inline-flex items-center gap-1.5 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-md px-1 -mx-1'
+                      >
+                        Average
+                        <span
+                          aria-hidden='true'
+                          className={`text-[10px] ${matrixSort.key === 'avg' ? 'text-sky-400' : 'text-slate-500'}`}
+                        >
+                          {matrixSortIcon('avg')}
+                        </span>
+                      </button>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className='divide-y divide-slate-800/60'>
+                  {matrixRows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={users.length + 2}
+                        className='py-8 text-center text-slate-500 text-sm'
+                      >
+                        No towers found matching your search or filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    matrixRows.map((stats) => (
+                      <tr
+                        key={stats.tower}
+                        className='hover:bg-slate-950/50 transition'
+                      >
+                        <th scope='row' className='py-3.5 px-4 font-normal'>
+                          <div className='flex items-center gap-2.5'>
+                            <span className='font-bold text-slate-100'>
+                              {stats.tower}
+                            </span>
+                            <CategoryBadge category={stats.category} />
+                            <StateBadge state={stats.state} />
+                          </div>
+                        </th>
+                        {users.map((u) => {
+                          const score =
+                            ratings[u]?.[stats.tower] !== undefined
+                              ? ratings[u][stats.tower]
+                              : DEFAULT_SCORE;
+                          const isExplicit =
+                            ratings[u]?.[stats.tower] !== undefined &&
+                            ratings[u][stats.tower] > 0;
+                          return (
+                            <td key={u} className='py-3.5 px-4 text-center'>
+                              <span
+                                className={`inline-block w-9 h-9 leading-9 rounded-xl font-bold text-sm ${getHeatmapClass(score)}`}
+                              >
+                                {isExplicit ? score : '—'}
+                              </span>
+                            </td>
+                          );
+                        })}
+                        <td className='py-3.5 px-4 text-center font-extrabold text-sky-400 text-base'>
+                          {stats.ratingsCount > 0 ? stats.avg : '—'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </main>
       )}
@@ -1555,7 +1618,7 @@ function App() {
             </div>
 
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-              {/* Card 1: Most Polarized */}
+              {/* Card 1: Most Polarised Tower */}
               <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
                 <div className='flex items-center gap-3'>
                   <div className='w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-lg'>
@@ -1563,10 +1626,10 @@ function App() {
                   </div>
                   <div>
                     <h3 className='font-bold text-slate-100 text-sm'>
-                      The Team Civil War
+                      Most Polarised Tower
                     </h3>
                     <p className='text-[11px] text-slate-400'>
-                      Most polarizing tower
+                      Highest rating variance across team
                     </p>
                   </div>
                 </div>
@@ -1595,87 +1658,100 @@ function App() {
                 </div>
               </div>
 
-              {/* Card 2: Unanimous Crowd Pleaser */}
-              <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-lg'>
-                    🏆
-                  </div>
-                  <div>
-                    <h3 className='font-bold text-slate-100 text-sm'>
-                      The Crowd Pleaser
-                    </h3>
-                    <p className='text-[11px] text-slate-400'>
-                      Highest team average
-                    </p>
-                  </div>
-                </div>
-                <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                  <div>
-                    <span className='font-bold text-base text-sky-300'>
-                      {crowdPleaser ? crowdPleaser.tower : 'N/A'}
-                    </span>
-                    <div className='flex items-center gap-1.5 mt-1'>
-                      {crowdPleaser && (
-                        <CategoryBadge category={crowdPleaser.category} />
-                      )}
-                      {crowdPleaser && (
-                        <StateBadge state={crowdPleaser.state} />
-                      )}
+              {/* Card 2: Most Unanimous Tower */}
+              {(() => {
+                const unanimous = [...towerMetrics]
+                  .filter((m) => m.ratingsCount >= 2)
+                  .sort(
+                    (a, b) =>
+                      a.variance - b.variance ||
+                      b.rawAvg - a.rawAvg ||
+                      b.ratingsCount - a.ratingsCount,
+                  )[0];
+
+                return (
+                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-bold text-lg'>
+                        🤝
+                      </div>
+                      <div>
+                        <h3 className='font-bold text-slate-100 text-sm'>
+                          Most Unanimous Tower
+                        </h3>
+                        <p className='text-[11px] text-slate-400'>
+                          Lowest rating variance across team
+                        </p>
+                      </div>
+                    </div>
+                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                      <div>
+                        <span className='font-bold text-base text-sky-300'>
+                          {unanimous ? unanimous.tower : 'N/A'}
+                        </span>
+                        <div className='flex items-center gap-1.5 mt-1'>
+                          {unanimous && (
+                            <CategoryBadge category={unanimous.category} />
+                          )}
+                          {unanimous && <StateBadge state={unanimous.state} />}
+                        </div>
+                      </div>
+                      <div className='text-right'>
+                        <span className='text-[10px] text-slate-400 block font-semibold'>
+                          Variance
+                        </span>
+                        <span className='font-mono text-cyan-400 font-extrabold text-sm'>
+                          {unanimous ? unanimous.variance : '0.00'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className='text-right'>
-                    <span className='text-[10px] text-slate-400 block font-semibold'>
-                      Average
-                    </span>
-                    <span className='font-mono text-emerald-400 font-extrabold text-sm'>
-                      {crowdPleaser ? crowdPleaser.avg : '0.00'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
-              {/* Card 3: Avoidance Zone */}
-              <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center font-bold text-lg'>
-                    🚫
-                  </div>
-                  <div>
-                    <h3 className='font-bold text-slate-100 text-sm'>
-                      The Avoidance Zone
-                    </h3>
-                    <p className='text-[11px] text-slate-400'>
-                      Lowest team average score
-                    </p>
-                  </div>
-                </div>
-                <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                  <div>
-                    <span className='font-bold text-base text-sky-300'>
-                      {avoidanceZone ? avoidanceZone.tower : 'N/A'}
-                    </span>
-                    <div className='flex items-center gap-1.5 mt-1'>
-                      {avoidanceZone && (
-                        <CategoryBadge category={avoidanceZone.category} />
-                      )}
-                      {avoidanceZone && (
-                        <StateBadge state={avoidanceZone.state} />
-                      )}
+              {/* Card 3: Five-Star Favourites */}
+              {(() => {
+                const perfectCount = towerMetrics.filter((m) =>
+                  Object.values(m.scoresMap).includes(5),
+                ).length;
+                return (
+                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 flex items-center justify-center font-bold text-lg'>
+                        ⭐
+                      </div>
+                      <div>
+                        <h3 className='font-bold text-slate-100 text-sm'>
+                          Five-Star Favourites
+                        </h3>
+                        <p className='text-[11px] text-slate-400'>
+                          Towers with at least one 5/5 score
+                        </p>
+                      </div>
+                    </div>
+                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
+                      <div>
+                        <span className='font-bold text-base text-yellow-300'>
+                          {perfectCount} of 31 Towers
+                        </span>
+                        <span className='text-xs text-slate-400 block mt-0.5'>
+                          Top Tier Status
+                        </span>
+                      </div>
+                      <div className='text-right'>
+                        <span className='text-[10px] text-slate-400 block font-semibold'>
+                          Percentage
+                        </span>
+                        <span className='font-mono text-yellow-400 font-extrabold text-sm'>
+                          {Math.round((perfectCount / 31) * 100)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className='text-right'>
-                    <span className='text-[10px] text-slate-400 block font-semibold'>
-                      Average
-                    </span>
-                    <span className='font-mono text-rose-400 font-extrabold text-sm'>
-                      {avoidanceZone ? avoidanceZone.avg : '0.00'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
-              {/* Card 4: Rating Twins (most similar pair of controllers) */}
+              {/* Card 4: Rating Twins */}
               {(() => {
                 let twins = null;
                 for (let i = 0; i < users.length; i++) {
@@ -1692,7 +1768,6 @@ function App() {
                         if (x === y) exact++;
                       }
                     });
-                    // Need a meaningful overlap before calling anyone twins
                     if (shared < 5) continue;
                     const gap = gapTotal / shared;
                     if (
@@ -1713,10 +1788,10 @@ function App() {
                       </div>
                       <div>
                         <h3 className='font-bold text-slate-100 text-sm'>
-                          The Rating Twins
+                          Rating Twins
                         </h3>
                         <p className='text-[11px] text-slate-400'>
-                          Two controllers who think most alike
+                          Closest preference match between controllers
                         </p>
                       </div>
                     </div>
@@ -1727,13 +1802,13 @@ function App() {
                         </span>
                         <span className='text-xs text-slate-400 block mt-0.5'>
                           {twins
-                            ? `${twins.exact} of ${twins.shared} shared towers matched exactly`
-                            : 'Needs 5+ towers rated by two controllers'}
+                            ? `${twins.exact} of ${twins.shared} Shared Towers`
+                            : 'Needs 5+ shared ratings'}
                         </span>
                       </div>
                       <div className='text-right'>
                         <span className='text-[10px] text-slate-400 block font-semibold'>
-                          Avg Gap
+                          Average Gap
                         </span>
                         <span className='font-mono text-teal-400 font-extrabold text-sm'>
                           {twins ? twins.gap.toFixed(2) : '0.00'} pts
@@ -1744,7 +1819,7 @@ function App() {
                 );
               })()}
 
-              {/* Card 5: Controller MVP (Optimist) */}
+              {/* Card 5: Team Optimist */}
               {(() => {
                 const optimist = users.reduce(
                   (best, u) => {
@@ -1769,7 +1844,7 @@ function App() {
                       </div>
                       <div>
                         <h3 className='font-bold text-slate-100 text-sm'>
-                          Controller MVP
+                          Team Optimist
                         </h3>
                         <p className='text-[11px] text-slate-400'>
                           Highest average rating given
@@ -1782,12 +1857,12 @@ function App() {
                           {optimist.name}
                         </span>
                         <span className='text-xs text-slate-400 block mt-0.5'>
-                          The Team Optimist
+                          Generous Scoring
                         </span>
                       </div>
                       <div className='text-right'>
                         <span className='text-[10px] text-slate-400 block font-semibold'>
-                          User Avg
+                          User Average
                         </span>
                         <span className='font-mono text-sky-400 font-extrabold text-sm'>
                           {optimist.avg} / 5
@@ -1798,7 +1873,7 @@ function App() {
                 );
               })()}
 
-              {/* Card 6: The Hard Bargainer (Realist/Critic) */}
+              {/* Card 6: Strict Critic */}
               {(() => {
                 const realist = users.reduce(
                   (strict, u) => {
@@ -1823,7 +1898,7 @@ function App() {
                       </div>
                       <div>
                         <h3 className='font-bold text-slate-100 text-sm'>
-                          The Hard Bargainer
+                          Strict Critic
                         </h3>
                         <p className='text-[11px] text-slate-400'>
                           Lowest average rating given
@@ -1836,12 +1911,12 @@ function App() {
                           {realist.name}
                         </span>
                         <span className='text-xs text-slate-400 block mt-0.5'>
-                          Strict Standards
+                          Tough Standards
                         </span>
                       </div>
                       <div className='text-right'>
                         <span className='text-[10px] text-slate-400 block font-semibold'>
-                          User Avg
+                          User Average
                         </span>
                         <span className='font-mono text-orange-400 font-extrabold text-sm'>
                           {realist.avg} / 5
@@ -1852,7 +1927,7 @@ function App() {
                 );
               })()}
 
-              {/* Card 7: The Lone Wolf */}
+              {/* Card 7: Lone Wolf */}
               {(() => {
                 let maxDevUser = 'N/A';
                 let maxDevVal = -1;
@@ -1881,10 +1956,10 @@ function App() {
                       </div>
                       <div>
                         <h3 className='font-bold text-slate-100 text-sm'>
-                          The Lone Wolf
+                          Lone Wolf
                         </h3>
                         <p className='text-[11px] text-slate-400'>
-                          Highest deviation from group avg
+                          Highest deviation from group average
                         </p>
                       </div>
                     </div>
@@ -1899,7 +1974,7 @@ function App() {
                       </div>
                       <div className='text-right'>
                         <span className='text-[10px] text-slate-400 block font-semibold'>
-                          Avg Variance
+                          Average Variance
                         </span>
                         <span className='font-mono text-pink-400 font-extrabold text-sm'>
                           {maxDevVal.toFixed(2)} pts
@@ -1910,41 +1985,60 @@ function App() {
                 );
               })()}
 
-              {/* Card 8: Perfectionist Peak */}
+              {/* Card 8: Hive Mind (The opposite of Lone Wolf) */}
               {(() => {
-                const perfectCount = towerMetrics.filter((m) =>
-                  Object.values(m.scoresMap).includes(5),
-                ).length;
+                let minDevUser = 'N/A';
+                let minDevVal = Infinity;
+                users.forEach((u) => {
+                  let devSum = 0;
+                  let count = 0;
+                  towerMetrics.forEach((m) => {
+                    const s = getScore(u, m.tower);
+                    if (s > 0) {
+                      devSum += Math.abs(s - m.rawAvg);
+                      count++;
+                    }
+                  });
+                  const avgDev = count ? devSum / count : Infinity;
+                  if (avgDev < minDevVal) {
+                    minDevVal = avgDev;
+                    minDevUser = u;
+                  }
+                });
+
                 return (
                   <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
                     <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 flex items-center justify-center font-bold text-lg'>
-                        ⭐
+                      <div className='w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-lg'>
+                        🐝
                       </div>
                       <div>
                         <h3 className='font-bold text-slate-100 text-sm'>
-                          Five-Star Favorites
+                          Hive Mind
                         </h3>
                         <p className='text-[11px] text-slate-400'>
-                          Towers with at least one 5/5 score
+                          Lowest deviation from group average
                         </p>
                       </div>
                     </div>
                     <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
                       <div>
-                        <span className='font-bold text-base text-yellow-300'>
-                          {perfectCount} of 31 Towers
+                        <span className='font-bold text-base text-indigo-300'>
+                          {minDevVal !== Infinity ? minDevUser : 'N/A'}
                         </span>
                         <span className='text-xs text-slate-400 block mt-0.5'>
-                          Hit Top Tier Status
+                          Closest Group Alignment
                         </span>
                       </div>
                       <div className='text-right'>
                         <span className='text-[10px] text-slate-400 block font-semibold'>
-                          Percentage
+                          Average Variance
                         </span>
-                        <span className='font-mono text-yellow-400 font-extrabold text-sm'>
-                          {Math.round((perfectCount / 31) * 100)}%
+                        <span className='font-mono text-indigo-400 font-extrabold text-sm'>
+                          {minDevVal !== Infinity
+                            ? minDevVal.toFixed(2)
+                            : '0.00'}{' '}
+                          pts
                         </span>
                       </div>
                     </div>
@@ -2107,7 +2201,7 @@ function App() {
               </button>
               <button
                 onClick={confirmResetUserRatings}
-                className='px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold rounded-2xl transition duration-200 shadow-lg shadow-rose-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400'
+                className='px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold rounded-2xl transition duration-200 shadow-lg shadow-rose-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-450'
               >
                 Confirm Reset
               </button>
