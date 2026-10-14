@@ -113,7 +113,7 @@ function App() {
     () => localStorage.getItem('atc_current_user') || CONTROLLERS[0],
   );
   const [ratings, setRatings] = useState({});
-  const [syncStatus, setSyncStatus] = useState('Initializing...');
+  const [syncStatus, setSyncStatus] = useState('Initialising...');
   const [activeTab, setActiveTab] = useState('rate');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
@@ -2356,105 +2356,314 @@ function App() {
           aria-labelledby='tab-breakdown'
           className='space-y-6 flex-1'
         >
-          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
-            <div className='mb-6'>
-              <h2 className='text-xl font-bold text-slate-100 mb-2'>
-                📊 Group Preference by Tower Type
-              </h2>
-              <p className='text-sm text-slate-300'>
-                Aggregated and ranked preference metrics across Radar, Regional,
-                and Metro D classifications.
-              </p>
-            </div>
-
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
-              {categoryStats.map((cat, idx) => (
-                <div
-                  key={cat.category}
-                  className='bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between shadow-inner transition hover:border-slate-700 duration-150'
-                >
-                  <div className='flex justify-between items-center mb-4'>
-                    <div className='flex items-center gap-2.5'>
-                      <span className='w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 font-extrabold text-xs text-slate-300 flex items-center justify-center shrink-0 shadow-sm'>
-                        #{idx + 1}
-                      </span>
-                      <span className='font-bold text-lg text-slate-100'>
-                        {cat.category}
-                      </span>
-                    </div>
-                    <CategoryBadge category={cat.category} />
-                  </div>
-                  <div className='space-y-2.5'>
-                    <div className='flex justify-between items-center text-sm border-b border-slate-800/60 pb-2'>
-                      <span className='text-slate-400'>Total Towers</span>
-                      <span className='font-bold text-slate-200'>
-                        {cat.count}
-                      </span>
-                    </div>
-                    <div className='flex justify-between items-center text-sm border-b border-slate-800/60 pb-2'>
-                      <span className='text-slate-400'>
-                        Group Average Score
-                      </span>
-                      <span className='font-extrabold text-sky-400 text-base'>
-                        {cat.avg} / 5
-                      </span>
-                    </div>
-                    <div className='flex justify-between items-center text-sm pt-1'>
-                      <span className='text-slate-400'>Top Pick</span>
-                      <span className='font-bold text-emerald-400'>
-                        {cat.topTower}
-                      </span>
-                    </div>
-                  </div>
+          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-10'>
+            {/* Tower Type Breakdown */}
+            <div className='space-y-6'>
+              <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800/80 pb-4'>
+                <div>
+                  <h2 className='text-xl font-bold text-slate-100 mb-1'>
+                    📊 Group Preference by Tower Type
+                  </h2>
+                  <p className='text-sm text-slate-300'>
+                    Aggregated preference metrics across Radar, Regional, and
+                    Metro D classifications.
+                  </p>
                 </div>
-              ))}
-            </div>
-          </section>
+              </div>
 
-          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
-            <div className='mb-6'>
-              <h2 className='text-xl font-bold text-slate-100 mb-2'>
-                🗺️ Group Preference by Australian State
-              </h2>
-              <p className='text-sm text-slate-300'>
-                Aggregated and ranked preference metrics across Australian
-                states and territories based on group ratings.
-              </p>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-6 items-start'>
+                {categoryStats.map((cat, idx) => {
+                  const catItems = towerMetrics.filter(
+                    (m) => m.category === cat.category,
+                  );
+                  const ratedCatItems = catItems.filter(
+                    (m) => m.ratingsCount > 0,
+                  );
+
+                  let topController = 'N/A';
+                  let lowestController = 'N/A';
+                  let bottomPick = 'N/A';
+
+                  if (ratedCatItems.length > 0) {
+                    const sortedCatTowers = [...ratedCatItems].sort(
+                      (a, b) =>
+                        b.rawAvg - a.rawAvg ||
+                        b.ratingsCount - a.ratingsCount ||
+                        a.tower.localeCompare(b.tower),
+                    );
+                    if (sortedCatTowers.length > 1) {
+                      bottomPick =
+                        sortedCatTowers[sortedCatTowers.length - 1].tower;
+                    }
+
+                    const controllerCatAvgs = users
+                      .map((u) => {
+                        let sum = 0;
+                        let count = 0;
+                        ratedCatItems.forEach((m) => {
+                          const s = ratings[u]?.[m.tower];
+                          if (s !== undefined && s > 0) {
+                            sum += s;
+                            count++;
+                          }
+                        });
+                        return {
+                          user: u,
+                          avg: count > 0 ? sum / count : -1,
+                          count,
+                        };
+                      })
+                      .filter((x) => x.count > 0);
+
+                    if (controllerCatAvgs.length > 0) {
+                      controllerCatAvgs.sort(
+                        (a, b) => b.avg - a.avg || a.user.localeCompare(b.user),
+                      );
+                      const highestVal = controllerCatAvgs[0].avg;
+                      const topUsers = controllerCatAvgs
+                        .filter((x) => x.avg === highestVal)
+                        .map((x) => x.user);
+                      topController = topUsers.join(', ');
+
+                      const lowestVal =
+                        controllerCatAvgs[controllerCatAvgs.length - 1].avg;
+                      const lowestUsers = controllerCatAvgs
+                        .filter((x) => x.avg === lowestVal)
+                        .map((x) => x.user);
+                      lowestController = lowestUsers.join(', ');
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={cat.category}
+                      className='bg-gradient-to-b from-slate-950/90 to-slate-950/70 border border-slate-800/90 p-5 rounded-3xl flex flex-col shadow-xl transition-all duration-300 hover:border-slate-700 hover:shadow-sky-950/20'
+                    >
+                      {/* Card Header & Average */}
+                      <div className='flex justify-between items-start gap-3 mb-5'>
+                        <div className='flex items-center gap-3'>
+                          <span className='w-8 h-8 rounded-2xl bg-sky-500/10 border border-sky-500/20 font-extrabold text-xs text-sky-400 flex items-center justify-center shrink-0 shadow-inner'>
+                            #{idx + 1}
+                          </span>
+                          <div>
+                            <span className='font-bold text-base text-slate-100 block'>
+                              {cat.category}
+                            </span>
+                            <span className='text-[11px] font-mono text-slate-400'>
+                              {cat.count} {cat.count === 1 ? 'Tower' : 'Towers'}
+                            </span>
+                          </div>
+                        </div>
+                        <CategoryBadge category={cat.category} />
+                      </div>
+
+                      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3.5 mb-5 flex items-center justify-between shadow-inner'>
+                        <span className='text-[11px] font-bold text-slate-400 uppercase tracking-wider'>
+                          Group Average
+                        </span>
+                        <div className='flex items-baseline gap-1'>
+                          <span className='font-extrabold text-sky-400 text-lg'>
+                            {cat.avg}
+                          </span>
+                          <span className='text-xs text-slate-500 font-medium'>
+                            / 5
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stat Metrics List */}
+                      <div className='space-y-2.5 text-xs'>
+                        <div className='flex justify-between items-start gap-4 bg-slate-900/30 hover:bg-slate-900/50 transition px-3.5 py-2.5 rounded-xl border border-slate-800/50'>
+                          <span className='text-slate-400 font-medium'>
+                            {cat.count === 1 ? 'Tower' : 'Top Pick'}
+                          </span>
+                          <span className='font-bold text-emerald-400 text-right break-words'>
+                            {cat.topTower}
+                          </span>
+                        </div>
+                        {cat.count > 1 && (
+                          <div className='flex justify-between items-start gap-4 bg-slate-900/30 hover:bg-slate-900/50 transition px-3.5 py-2.5 rounded-xl border border-slate-800/50'>
+                            <span className='text-slate-400 font-medium'>
+                              Bottom Pick
+                            </span>
+                            <span className='font-bold text-rose-400 text-right break-words'>
+                              {bottomPick}
+                            </span>
+                          </div>
+                        )}
+                        <div className='flex justify-between items-start gap-4 bg-slate-900/30 hover:bg-slate-900/50 transition px-3.5 py-2.5 rounded-xl border border-slate-800/50'>
+                          <span className='text-slate-400 font-medium'>
+                            Top Rated
+                          </span>
+                          <span className='font-bold text-sky-300 text-right break-words'>
+                            {topController}
+                          </span>
+                        </div>
+                        <div className='flex justify-between items-start gap-4 bg-slate-900/30 hover:bg-slate-900/50 transition px-3.5 py-2.5 rounded-xl border border-slate-800/50'>
+                          <span className='text-slate-400 font-medium'>
+                            Bottom Rated
+                          </span>
+                          <span className='font-bold text-orange-300 text-right break-words'>
+                            {lowestController}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-              {stateStats.map((st, idx) => (
-                <div
-                  key={st.state}
-                  className='bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between shadow-inner transition hover:border-slate-700 duration-150'
-                >
-                  <div className='flex justify-between items-center mb-3.5'>
-                    <div className='flex items-center gap-2'>
-                      <span className='w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 font-extrabold text-[11px] text-slate-300 flex items-center justify-center shrink-0 shadow-sm'>
-                        #{idx + 1}
-                      </span>
-                      <StateBadge state={st.state} />
-                    </div>
-                    <span className='text-xs font-mono text-slate-400'>
-                      {st.count} {st.count === 1 ? 'Tower' : 'Towers'}
-                    </span>
-                  </div>
-                  <div className='space-y-2.5'>
-                    <div className='flex justify-between items-center text-sm border-b border-slate-800/60 pb-2'>
-                      <span className='text-slate-400'>State Avg Score</span>
-                      <span className='font-extrabold text-sky-400 text-base'>
-                        {st.avg}
-                      </span>
-                    </div>
-                    <div className='flex justify-between items-center text-sm pt-1'>
-                      <span className='text-slate-400'>Top Pick</span>
-                      <span className='font-bold text-emerald-400'>
-                        {st.topTower}
-                      </span>
-                    </div>
-                  </div>
+            {/* Divider */}
+            <div className='border-t border-slate-800/80 pt-8 space-y-6'>
+              <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800/80 pb-4'>
+                <div>
+                  <h2 className='text-xl font-bold text-slate-100 mb-1'>
+                    🗺️ Group Preference by Australian State
+                  </h2>
+                  <p className='text-sm text-slate-300'>
+                    Aggregated preference metrics across Australian states and
+                    territories.
+                  </p>
                 </div>
-              ))}
+              </div>
+
+              <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start'>
+                {stateStats.map((st, idx) => {
+                  const stItems = towerMetrics.filter(
+                    (m) => m.state === st.state,
+                  );
+                  const ratedStItems = stItems.filter(
+                    (m) => m.ratingsCount > 0,
+                  );
+
+                  let topController = 'N/A';
+                  let lowestController = 'N/A';
+                  let bottomPick = 'N/A';
+
+                  if (ratedStItems.length > 0) {
+                    const sortedStTowers = [...ratedStItems].sort(
+                      (a, b) =>
+                        b.rawAvg - a.rawAvg ||
+                        b.ratingsCount - a.ratingsCount ||
+                        a.tower.localeCompare(b.tower),
+                    );
+                    if (sortedStTowers.length > 1) {
+                      bottomPick =
+                        sortedStTowers[sortedStTowers.length - 1].tower;
+                    }
+
+                    const controllerStAvgs = users
+                      .map((u) => {
+                        let sum = 0;
+                        let count = 0;
+                        ratedStItems.forEach((m) => {
+                          const s = ratings[u]?.[m.tower];
+                          if (s !== undefined && s > 0) {
+                            sum += s;
+                            count++;
+                          }
+                        });
+                        return {
+                          user: u,
+                          avg: count > 0 ? sum / count : -1,
+                          count,
+                        };
+                      })
+                      .filter((x) => x.count > 0);
+
+                    if (controllerStAvgs.length > 0) {
+                      controllerStAvgs.sort(
+                        (a, b) => b.avg - a.avg || a.user.localeCompare(b.user),
+                      );
+                      const highestVal = controllerStAvgs[0].avg;
+                      const topUsers = controllerStAvgs
+                        .filter((x) => x.avg === highestVal)
+                        .map((x) => x.user);
+                      topController = topUsers.join(', ');
+
+                      const lowestVal =
+                        controllerStAvgs[controllerStAvgs.length - 1].avg;
+                      const lowestUsers = controllerStAvgs
+                        .filter((x) => x.avg === lowestVal)
+                        .map((x) => x.user);
+                      lowestController = lowestUsers.join(', ');
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={st.state}
+                      className='bg-gradient-to-b from-slate-950/90 to-slate-950/70 border border-slate-800/90 p-5 rounded-3xl flex flex-col shadow-xl transition-all duration-300 hover:border-slate-700 hover:shadow-sky-950/20'
+                    >
+                      {/* Card Header & Average */}
+                      <div className='flex justify-between items-center gap-3 mb-4'>
+                        <div className='flex items-center gap-2.5'>
+                          <span className='w-7 h-7 rounded-xl bg-sky-500/10 border border-sky-500/20 font-extrabold text-[11px] text-sky-400 flex items-center justify-center shrink-0 shadow-inner'>
+                            #{idx + 1}
+                          </span>
+                          <StateBadge state={st.state} />
+                        </div>
+                        <span className='text-[11px] font-mono text-slate-400'>
+                          {st.count} {st.count === 1 ? 'Tower' : 'Towers'}
+                        </span>
+                      </div>
+
+                      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3 mb-4 flex items-center justify-between shadow-inner'>
+                        <span className='text-[11px] font-bold text-slate-400 uppercase tracking-wider'>
+                          State Average
+                        </span>
+                        <div className='flex items-baseline gap-1'>
+                          <span className='font-extrabold text-sky-400 text-base'>
+                            {st.avg}
+                          </span>
+                          <span className='text-[11px] text-slate-500 font-medium'>
+                            / 5
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stat Metrics List */}
+                      <div className='space-y-2 text-xs'>
+                        <div className='flex justify-between items-start gap-3 bg-slate-900/30 hover:bg-slate-900/50 transition px-3 py-2 rounded-xl border border-slate-800/50'>
+                          <span className='text-slate-400 font-medium'>
+                            {st.count === 1 ? 'Tower' : 'Top Pick'}
+                          </span>
+                          <span className='font-bold text-emerald-400 text-right break-words'>
+                            {st.topTower}
+                          </span>
+                        </div>
+                        {st.count > 1 && (
+                          <div className='flex justify-between items-start gap-3 bg-slate-900/30 hover:bg-slate-900/50 transition px-3 py-2 rounded-xl border border-slate-800/50'>
+                            <span className='text-slate-400 font-medium'>
+                              Bottom Pick
+                            </span>
+                            <span className='font-bold text-rose-400 text-right break-words'>
+                              {bottomPick}
+                            </span>
+                          </div>
+                        )}
+                        <div className='flex justify-between items-start gap-3 bg-slate-900/30 hover:bg-slate-900/50 transition px-3 py-2 rounded-xl border border-slate-800/50'>
+                          <span className='text-slate-400 font-medium'>
+                            Top Rated
+                          </span>
+                          <span className='font-bold text-sky-300 text-right break-words'>
+                            {topController}
+                          </span>
+                        </div>
+                        <div className='flex justify-between items-start gap-3 bg-slate-900/30 hover:bg-slate-900/50 transition px-3 py-2 rounded-xl border border-slate-800/50'>
+                          <span className='text-slate-400 font-medium'>
+                            Bottom Rated
+                          </span>
+                          <span className='font-bold text-orange-300 text-right break-words'>
+                            {lowestController}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </section>
         </main>
