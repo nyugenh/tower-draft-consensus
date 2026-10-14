@@ -2221,7 +2221,7 @@ function App() {
                   );
                 })()}
 
-                {/* Card 11: The Fence Sitter (Lowest Rating Variance) */}
+                {/* Card 11: Fence Sitter (Lowest Rating Variance) */}
                 {(() => {
                   let fenceUser = 'N/A';
                   let minVar = Infinity;
@@ -2253,7 +2253,7 @@ function App() {
                         </div>
                         <div>
                           <h3 className='font-bold text-slate-100 text-sm'>
-                            The Fence Sitter
+                            Fence Sitter
                           </h3>
                           <p className='text-[11px] text-slate-400 line-clamp-1'>
                             Lowest rating variance
@@ -2282,7 +2282,7 @@ function App() {
                   );
                 })()}
 
-                {/* Card 12: The Extremist (Highest Rating Variance) */}
+                {/* Card 12: Extremist (Highest Rating Variance) */}
                 {(() => {
                   let extremeUser = 'N/A';
                   let maxVar = -1;
@@ -2314,7 +2314,7 @@ function App() {
                         </div>
                         <div>
                           <h3 className='font-bold text-slate-100 text-sm'>
-                            The Extremist
+                            Extremist
                           </h3>
                           <p className='text-[11px] text-slate-400 line-clamp-1'>
                             Highest rating variance
@@ -2368,15 +2368,20 @@ function App() {
             </div>
 
             <div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
-              {categoryStats.map((cat) => (
+              {categoryStats.map((cat, idx) => (
                 <div
                   key={cat.category}
-                  className='bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner'
+                  className='bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between shadow-inner transition hover:border-slate-700 duration-150'
                 >
                   <div className='flex justify-between items-center mb-4'>
-                    <span className='font-bold text-lg text-slate-100'>
-                      {cat.category}
-                    </span>
+                    <div className='flex items-center gap-2.5'>
+                      <span className='w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 font-extrabold text-xs text-slate-300 flex items-center justify-center shrink-0 shadow-sm'>
+                        #{idx + 1}
+                      </span>
+                      <span className='font-bold text-lg text-slate-100'>
+                        {cat.category}
+                      </span>
+                    </div>
                     <CategoryBadge category={cat.category} />
                   </div>
                   <div className='space-y-2.5'>
@@ -2418,13 +2423,18 @@ function App() {
             </div>
 
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-              {stateStats.map((st) => (
+              {stateStats.map((st, idx) => (
                 <div
                   key={st.state}
-                  className='bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner'
+                  className='bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between shadow-inner transition hover:border-slate-700 duration-150'
                 >
                   <div className='flex justify-between items-center mb-3.5'>
-                    <StateBadge state={st.state} />
+                    <div className='flex items-center gap-2'>
+                      <span className='w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 font-extrabold text-[11px] text-slate-300 flex items-center justify-center shrink-0 shadow-sm'>
+                        #{idx + 1}
+                      </span>
+                      <StateBadge state={st.state} />
+                    </div>
                     <span className='text-xs font-mono text-slate-400'>
                       {st.count} {st.count === 1 ? 'Tower' : 'Towers'}
                     </span>
