@@ -516,7 +516,7 @@ function App() {
 
   // Trivia Insights Derivation
   const ratedTowers = towerMetrics.filter((m) => m.ratingsCount > 0);
-  const mostPolarized = towerMetrics
+  const mostPolarised = towerMetrics
     .filter((m) => m.ratingsCount >= 2)
     .sort(
       (a, b) => b.variance - a.variance || b.ratingsCount - a.ratingsCount,
@@ -760,7 +760,7 @@ function App() {
           id='controllers-heading'
           className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1'
         >
-          Active Controller Profile (Unrated defaults to 0)
+          Active Controller Profile
         </h2>
         <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3'>
           {users.map((u) => {
@@ -948,8 +948,7 @@ function App() {
                   <span className='text-sky-400'>{currentUser}</span>
                 </h2>
                 <p className='text-sm text-slate-300'>
-                  Score every tower from 1 (Lowest) to 5 (Highest). Unrated
-                  defaults to 0.
+                  Score every tower from 1 (Lowest) to 5 (Highest).
                 </p>
               </div>
               <button
@@ -960,71 +959,95 @@ function App() {
               </button>
             </div>
 
+            {/* TOWER RATING CARDS GRID */}
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-              {ALL_TOWERS.filter((tower) => {
-                const meta = TOWER_METADATA[tower];
-                if (searchTerm) {
-                  const query = searchTerm.toLowerCase();
-                  const matchName = tower.toLowerCase().includes(query);
-                  const matchState = meta.state.toLowerCase().includes(query);
-                  const matchCat = meta.category.toLowerCase().includes(query);
-                  if (!matchName && !matchState && !matchCat) return false;
-                }
-                if (
-                  categoryFilter !== 'All' &&
-                  meta.category !== categoryFilter
-                )
-                  return false;
-                return true;
-              }).map((tower) => {
-                const meta = TOWER_METADATA[tower];
-                const score = ratings[currentUser]?.[tower];
-                const isRated = score !== undefined && score > 0;
-                return (
-                  <div
-                    key={tower}
-                    className='bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition duration-200 shadow-inner'
-                  >
-                    <div className='flex justify-between items-start mb-4'>
-                      <div>
-                        <span className='font-bold text-base text-slate-100'>
-                          {tower}
-                        </span>
-                        <div className='flex items-center gap-2.5 mt-1.5'>
-                          <CategoryBadge category={meta.category} />
-                          <StateBadge state={meta.state} />
-                        </div>
+              {(() => {
+                const filteredTowers = ALL_TOWERS.filter((tower) => {
+                  const meta = TOWER_METADATA[tower];
+                  if (searchTerm) {
+                    const query = searchTerm.toLowerCase();
+                    const matchName = tower.toLowerCase().includes(query);
+                    const matchState = meta.state.toLowerCase().includes(query);
+                    const matchCat = meta.category
+                      .toLowerCase()
+                      .includes(query);
+                    if (!matchName && !matchState && !matchCat) return false;
+                  }
+                  if (
+                    categoryFilter !== 'All' &&
+                    meta.category !== categoryFilter
+                  )
+                    return false;
+                  return true;
+                });
+
+                if (filteredTowers.length === 0) {
+                  return (
+                    <div className='col-span-full bg-slate-950/80 border border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center space-y-3'>
+                      <div className='w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 flex items-center justify-center text-xl font-bold'>
+                        🔍
                       </div>
-                      {!isRated && (
-                        <span className='text-[10px] font-semibold bg-slate-900 text-slate-400 px-2.5 py-1 rounded-lg border border-slate-800'>
-                          Unrated (0)
-                        </span>
-                      )}
+                      <h3 className='font-bold text-slate-200 text-base'>
+                        No towers match your current search or filter
+                      </h3>
+                      <p className='text-xs text-slate-400 max-w-sm'>
+                        Try adjusting your category, state, or search keywords
+                        to view and rate available towers.
+                      </p>
                     </div>
+                  );
+                }
+
+                return filteredTowers.map((tower) => {
+                  const meta = TOWER_METADATA[tower];
+                  const score = ratings[currentUser]?.[tower];
+                  const isRated = score !== undefined && score > 0;
+                  return (
                     <div
-                      className='flex items-center justify-between gap-1.5 mt-2'
-                      role='group'
-                      aria-label={`Rate ${tower}`}
+                      key={tower}
+                      className='bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition duration-200 shadow-inner'
                     >
-                      {[1, 2, 3, 4, 5].map((num) => (
-                        <button
-                          key={num}
-                          onClick={() => handleRatingChange(tower, num)}
-                          aria-label={`Rate ${tower} ${num} out of 5`}
-                          aria-pressed={score === num}
-                          className={`w-10 h-10 rounded-xl font-extrabold transition duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
-                            score === num
-                              ? 'bg-sky-500 text-white scale-105 shadow-md shadow-sky-950'
-                              : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
-                          }`}
-                        >
-                          {num}
-                        </button>
-                      ))}
+                      <div className='flex justify-between items-start mb-4'>
+                        <div>
+                          <span className='font-bold text-base text-slate-100'>
+                            {tower}
+                          </span>
+                          <div className='flex items-center gap-2.5 mt-1.5'>
+                            <CategoryBadge category={meta.category} />
+                            <StateBadge state={meta.state} />
+                          </div>
+                        </div>
+                        {!isRated && (
+                          <span className='text-[10px] font-semibold bg-slate-900 text-slate-400 px-2.5 py-1 rounded-lg border border-slate-800'>
+                            Unrated (0)
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className='flex items-center justify-between gap-1.5 mt-2'
+                        role='group'
+                        aria-label={`Rate ${tower}`}
+                      >
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <button
+                            key={num}
+                            onClick={() => handleRatingChange(tower, num)}
+                            aria-label={`Rate ${tower} ${num} out of 5`}
+                            aria-pressed={score === num}
+                            className={`w-10 h-10 rounded-xl font-extrabold transition duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                              score === num
+                                ? 'bg-sky-500 text-white scale-105 shadow-md shadow-sky-950'
+                                : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                            }`}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </section>
         </main>
@@ -1604,447 +1627,722 @@ function App() {
           id='panel-trivia'
           role='tabpanel'
           aria-labelledby='tab-trivia'
-          className='space-y-6 flex-1'
+          className='space-y-8 flex-1'
         >
-          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
-            <div className='mb-6'>
-              <h2 className='text-xl font-bold text-slate-100 mb-2'>
+          <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-8'>
+            <div>
+              <h2 className='text-xl font-bold text-slate-100 mb-1'>
                 💡 Team Rating Trivia & Superlatives
               </h2>
-              <p className='text-sm text-slate-300'>
-                Automatic fun facts, structural breakdowns, and standout
-                superlatives derived straight from your team's live ratings.
+              <p className='text-sm text-slate-400'>
+                Live statistics, structural breakdowns, and controller
+                personalities derived straight from team ratings.
               </p>
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-              {/* Card 1: Most Polarised Tower */}
-              <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-lg'>
-                    ⚡
-                  </div>
-                  <div>
-                    <h3 className='font-bold text-slate-100 text-sm'>
-                      Most Polarised Tower
-                    </h3>
-                    <p className='text-[11px] text-slate-400'>
-                      Highest rating variance across team
-                    </p>
-                  </div>
-                </div>
-                <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                  <div>
-                    <span className='font-bold text-base text-sky-300'>
-                      {mostPolarized ? mostPolarized.tower : 'N/A'}
-                    </span>
-                    <div className='flex items-center gap-1.5 mt-1'>
-                      {mostPolarized && (
-                        <CategoryBadge category={mostPolarized.category} />
-                      )}
-                      {mostPolarized && (
-                        <StateBadge state={mostPolarized.state} />
-                      )}
-                    </div>
-                  </div>
-                  <div className='text-right'>
-                    <span className='text-[10px] text-slate-400 block font-semibold'>
-                      Variance
-                    </span>
-                    <span className='font-mono text-amber-400 font-extrabold text-sm'>
-                      {mostPolarized ? mostPolarized.variance : '0.00'}
-                    </span>
-                  </div>
-                </div>
+            {/* SECTION 1: TOWER CONSENSUS & DISTRIBUTION */}
+            <div className='space-y-4'>
+              <div className='flex items-center gap-2 border-b border-slate-800/80 pb-2'>
+                <span className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
+                  Tower Consensus & Distribution
+                </span>
               </div>
-
-              {/* Card 2: Most Unanimous Tower */}
-              {(() => {
-                const unanimous = [...towerMetrics]
-                  .filter((m) => m.ratingsCount >= 2)
-                  .sort(
-                    (a, b) =>
-                      a.variance - b.variance ||
-                      b.rawAvg - a.rawAvg ||
-                      b.ratingsCount - a.ratingsCount,
-                  )[0];
-
-                return (
-                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-bold text-lg'>
-                        🤝
-                      </div>
-                      <div>
-                        <h3 className='font-bold text-slate-100 text-sm'>
-                          Most Unanimous Tower
-                        </h3>
-                        <p className='text-[11px] text-slate-400'>
-                          Lowest rating variance across team
-                        </p>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+                {/* Card 1: Most Polarised Tower */}
+                <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                  <div className='flex items-center gap-3'>
+                    <div className='w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                      ⚡
+                    </div>
+                    <div>
+                      <h3 className='font-bold text-slate-100 text-sm'>
+                        Most Polarised
+                      </h3>
+                      <p className='text-[11px] text-slate-400 line-clamp-1'>
+                        Highest score variance
+                      </p>
+                    </div>
+                  </div>
+                  <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                    <div className='min-w-0'>
+                      <span className='font-bold text-sm text-sky-300 block truncate'>
+                        {mostPolarised ? mostPolarised.tower : 'N/A'}
+                      </span>
+                      <div className='flex items-center gap-1 mt-1'>
+                        {mostPolarised && (
+                          <CategoryBadge category={mostPolarised.category} />
+                        )}
+                        {mostPolarised && (
+                          <StateBadge state={mostPolarised.state} />
+                        )}
                       </div>
                     </div>
-                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                      <div>
-                        <span className='font-bold text-base text-sky-300'>
-                          {unanimous ? unanimous.tower : 'N/A'}
-                        </span>
-                        <div className='flex items-center gap-1.5 mt-1'>
-                          {unanimous && (
-                            <CategoryBadge category={unanimous.category} />
-                          )}
-                          {unanimous && <StateBadge state={unanimous.state} />}
+                    <div className='text-right shrink-0'>
+                      <span className='text-[10px] text-slate-400 block font-semibold'>
+                        Variance
+                      </span>
+                      <span className='font-mono text-amber-400 font-extrabold text-sm'>
+                        {mostPolarised ? mostPolarised.variance : '0.00'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 2: Most Unanimous Tower */}
+                {(() => {
+                  const unanimous = [...towerMetrics]
+                    .filter((m) => m.ratingsCount >= 2)
+                    .sort(
+                      (a, b) =>
+                        a.variance - b.variance ||
+                        b.rawAvg - a.rawAvg ||
+                        b.ratingsCount - a.ratingsCount,
+                    )[0];
+
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          🤝
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            Most Unanimous
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Lowest score variance
+                          </p>
                         </div>
                       </div>
-                      <div className='text-right'>
-                        <span className='text-[10px] text-slate-400 block font-semibold'>
-                          Variance
-                        </span>
-                        <span className='font-mono text-cyan-400 font-extrabold text-sm'>
-                          {unanimous ? unanimous.variance : '0.00'}
-                        </span>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-sky-300 block truncate'>
+                            {unanimous ? unanimous.tower : 'N/A'}
+                          </span>
+                          <div className='flex items-center gap-1 mt-1'>
+                            {unanimous && (
+                              <CategoryBadge category={unanimous.category} />
+                            )}
+                            {unanimous && (
+                              <StateBadge state={unanimous.state} />
+                            )}
+                          </div>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Variance
+                          </span>
+                          <span className='font-mono text-cyan-400 font-extrabold text-sm'>
+                            {unanimous ? unanimous.variance : '0.00'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
 
-              {/* Card 3: Five-Star Favourites */}
-              {(() => {
-                const perfectCount = towerMetrics.filter((m) =>
-                  Object.values(m.scoresMap).includes(5),
-                ).length;
-                return (
-                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 flex items-center justify-center font-bold text-lg'>
-                        ⭐
+                {/* Card 3: Five-Star Favourites */}
+                {(() => {
+                  const perfectCount = towerMetrics.filter((m) =>
+                    Object.values(m.scoresMap).includes(5),
+                  ).length;
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          ⭐
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            Five-Star Favourites
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Towers given a 5/5
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className='font-bold text-slate-100 text-sm'>
-                          Five-Star Favourites
-                        </h3>
-                        <p className='text-[11px] text-slate-400'>
-                          Towers with at least one 5/5 score
-                        </p>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-yellow-300 block truncate'>
+                            {perfectCount} of 31 Towers
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            Top tier status
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Share
+                          </span>
+                          <span className='font-mono text-yellow-400 font-extrabold text-sm'>
+                            {Math.round((perfectCount / 31) * 100)}%
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                      <div>
-                        <span className='font-bold text-base text-yellow-300'>
-                          {perfectCount} of 31 Towers
-                        </span>
-                        <span className='text-xs text-slate-400 block mt-0.5'>
-                          Top Tier Status
-                        </span>
-                      </div>
-                      <div className='text-right'>
-                        <span className='text-[10px] text-slate-400 block font-semibold'>
-                          Percentage
-                        </span>
-                        <span className='font-mono text-yellow-400 font-extrabold text-sm'>
-                          {Math.round((perfectCount / 31) * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
 
-              {/* Card 4: Rating Twins */}
-              {(() => {
-                let twins = null;
-                for (let i = 0; i < users.length; i++) {
-                  for (let j = i + 1; j < users.length; j++) {
-                    let shared = 0;
-                    let exact = 0;
-                    let gapTotal = 0;
-                    ALL_TOWERS.forEach((t) => {
-                      const x = ratings[users[i]]?.[t];
-                      const y = ratings[users[j]]?.[t];
-                      if (x > 0 && y > 0) {
-                        shared++;
-                        gapTotal += Math.abs(x - y);
-                        if (x === y) exact++;
+                {/* Card 4: One-Star Rejections */}
+                {(() => {
+                  const lowestCount = towerMetrics.filter((m) =>
+                    Object.values(m.scoresMap).includes(1),
+                  ).length;
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          🚫
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            One-Star Rejections
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Towers given a 1/5
+                          </p>
+                        </div>
+                      </div>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-rose-300 block truncate'>
+                            {lowestCount} of 31 Towers
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            Bottom tier status
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Share
+                          </span>
+                          <span className='font-mono text-rose-400 font-extrabold text-sm'>
+                            {Math.round((lowestCount / 31) * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* SECTION 2: CONTROLLER PAIRINGS & TEAM DYNAMICS */}
+            <div className='space-y-4'>
+              <div className='flex items-center gap-2 border-b border-slate-800/80 pb-2'>
+                <span className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
+                  Controller Pairings & Group Deviation
+                </span>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+                {/* Card 5: Rating Twins */}
+                {(() => {
+                  let twins = null;
+                  for (let i = 0; i < users.length; i++) {
+                    for (let j = i + 1; j < users.length; j++) {
+                      let shared = 0;
+                      let exact = 0;
+                      let gapTotal = 0;
+                      ALL_TOWERS.forEach((t) => {
+                        const x = ratings[users[i]]?.[t];
+                        const y = ratings[users[j]]?.[t];
+                        if (x > 0 && y > 0) {
+                          shared++;
+                          gapTotal += Math.abs(x - y);
+                          if (x === y) exact++;
+                        }
+                      });
+                      if (shared < 5) continue;
+                      const gap = gapTotal / shared;
+                      if (
+                        !twins ||
+                        gap < twins.gap ||
+                        (gap === twins.gap && shared > twins.shared)
+                      ) {
+                        twins = {
+                          a: users[i],
+                          b: users[j],
+                          gap,
+                          shared,
+                          exact,
+                        };
+                      }
+                    }
+                  }
+
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          👯
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            Rating Twins
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Closest rating alignment
+                          </p>
+                        </div>
+                      </div>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-teal-300 block truncate'>
+                            {twins ? `${twins.a} & ${twins.b}` : 'N/A'}
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            {twins
+                              ? `${twins.exact}/${twins.shared} exact`
+                              : 'Requires 5+ shared'}
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Avg Gap
+                          </span>
+                          <span className='font-mono text-teal-400 font-extrabold text-sm'>
+                            {twins ? twins.gap.toFixed(2) : '0.00'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Card 6: Rating Opposites */}
+                {(() => {
+                  let opposites = null;
+                  for (let i = 0; i < users.length; i++) {
+                    for (let j = i + 1; j < users.length; j++) {
+                      let shared = 0;
+                      let exact = 0;
+                      let gapTotal = 0;
+                      ALL_TOWERS.forEach((t) => {
+                        const x = ratings[users[i]]?.[t];
+                        const y = ratings[users[j]]?.[t];
+                        if (x > 0 && y > 0) {
+                          shared++;
+                          gapTotal += Math.abs(x - y);
+                          if (x === y) exact++;
+                        }
+                      });
+                      if (shared < 5) continue;
+                      const gap = gapTotal / shared;
+                      if (
+                        !opposites ||
+                        gap > opposites.gap ||
+                        (gap === opposites.gap && shared > opposites.shared)
+                      ) {
+                        opposites = {
+                          a: users[i],
+                          b: users[j],
+                          gap,
+                          shared,
+                          exact,
+                        };
+                      }
+                    }
+                  }
+
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          ☯️
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            Rating Opposites
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Widest preference gap
+                          </p>
+                        </div>
+                      </div>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-purple-300 block truncate'>
+                            {opposites
+                              ? `${opposites.a} & ${opposites.b}`
+                              : 'N/A'}
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            {opposites
+                              ? `${opposites.exact}/${opposites.shared} exact`
+                              : 'Requires 5+ shared'}
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Avg Gap
+                          </span>
+                          <span className='font-mono text-purple-400 font-extrabold text-sm'>
+                            {opposites ? opposites.gap.toFixed(2) : '0.00'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Card 7: Hive Mind */}
+                {(() => {
+                  let minDevUser = 'N/A';
+                  let minDevVal = Infinity;
+                  users.forEach((u) => {
+                    let devSum = 0;
+                    let count = 0;
+                    towerMetrics.forEach((m) => {
+                      const s = getScore(u, m.tower);
+                      if (s > 0) {
+                        devSum += Math.abs(s - m.rawAvg);
+                        count++;
                       }
                     });
-                    if (shared < 5) continue;
-                    const gap = gapTotal / shared;
-                    if (
-                      !twins ||
-                      gap < twins.gap ||
-                      (gap === twins.gap && shared > twins.shared)
-                    ) {
-                      twins = { a: users[i], b: users[j], gap, shared, exact };
+                    const avgDev = count ? devSum / count : Infinity;
+                    if (avgDev < minDevVal) {
+                      minDevVal = avgDev;
+                      minDevUser = u;
                     }
-                  }
-                }
+                  });
 
-                return (
-                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-400 flex items-center justify-center font-bold text-lg'>
-                        👯
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          🐝
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            Hive Mind
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Lowest team deviation
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className='font-bold text-slate-100 text-sm'>
-                          Rating Twins
-                        </h3>
-                        <p className='text-[11px] text-slate-400'>
-                          Closest preference match between controllers
-                        </p>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-indigo-300 block truncate'>
+                            {minDevVal !== Infinity ? minDevUser : 'N/A'}
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            Closest to consensus
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Avg Dev
+                          </span>
+                          <span className='font-mono text-indigo-400 font-extrabold text-sm'>
+                            {minDevVal !== Infinity
+                              ? minDevVal.toFixed(2)
+                              : '0.00'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                      <div>
-                        <span className='font-bold text-base text-sky-300'>
-                          {twins ? `${twins.a} & ${twins.b}` : 'N/A'}
-                        </span>
-                        <span className='text-xs text-slate-400 block mt-0.5'>
-                          {twins
-                            ? `${twins.exact} of ${twins.shared} Shared Towers`
-                            : 'Needs 5+ shared ratings'}
-                        </span>
+                  );
+                })()}
+
+                {/* Card 8: Lone Wolf */}
+                {(() => {
+                  let maxDevUser = 'N/A';
+                  let maxDevVal = -1;
+                  users.forEach((u) => {
+                    let devSum = 0;
+                    let count = 0;
+                    towerMetrics.forEach((m) => {
+                      const s = getScore(u, m.tower);
+                      if (s > 0) {
+                        devSum += Math.abs(s - m.rawAvg);
+                        count++;
+                      }
+                    });
+                    const avgDev = count ? devSum / count : 0;
+                    if (avgDev > maxDevVal) {
+                      maxDevVal = avgDev;
+                      maxDevUser = u;
+                    }
+                  });
+
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-pink-500/20 border border-pink-500/30 text-pink-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          🐺
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            Lone Wolf
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Highest team deviation
+                          </p>
+                        </div>
                       </div>
-                      <div className='text-right'>
-                        <span className='text-[10px] text-slate-400 block font-semibold'>
-                          Average Gap
-                        </span>
-                        <span className='font-mono text-teal-400 font-extrabold text-sm'>
-                          {twins ? twins.gap.toFixed(2) : '0.00'} pts
-                        </span>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-pink-300 block truncate'>
+                            {maxDevUser}
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            Farthest from consensus
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Avg Dev
+                          </span>
+                          <span className='font-mono text-pink-400 font-extrabold text-sm'>
+                            {maxDevVal.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
+            </div>
 
-              {/* Card 5: Team Optimist */}
-              {(() => {
-                const optimist = users.reduce(
-                  (best, u) => {
+            {/* SECTION 3: CONTROLLER SCORING PERSONALITIES */}
+            <div className='space-y-4'>
+              <div className='flex items-center gap-2 border-b border-slate-800/80 pb-2'>
+                <span className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
+                  Controller Scoring Personalities
+                </span>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+                {/* Card 9: Team Optimist */}
+                {(() => {
+                  const optimist = users.reduce(
+                    (best, u) => {
+                      const uScores = Object.values(ratings[u] || {}).filter(
+                        (s) => s > 0,
+                      );
+                      const avg = uScores.length
+                        ? uScores.reduce((a, b) => a + b, 0) / uScores.length
+                        : 0;
+                      return avg > best.avg
+                        ? { name: u, avg: avg.toFixed(2) }
+                        : best;
+                    },
+                    { name: 'N/A', avg: 0 },
+                  );
+
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          🌟
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            Team Optimist
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Highest overall average
+                          </p>
+                        </div>
+                      </div>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-sky-300 block truncate'>
+                            {optimist.name}
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            Generous scoring
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            User Avg
+                          </span>
+                          <span className='font-mono text-sky-400 font-extrabold text-sm'>
+                            {optimist.avg}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Card 10: Strict Critic */}
+                {(() => {
+                  const realist = users.reduce(
+                    (strict, u) => {
+                      const uScores = Object.values(ratings[u] || {}).filter(
+                        (s) => s > 0,
+                      );
+                      const avg = uScores.length
+                        ? uScores.reduce((a, b) => a + b, 0) / uScores.length
+                        : 5;
+                      return avg < strict.avg
+                        ? { name: u, avg: avg.toFixed(2) }
+                        : strict;
+                    },
+                    { name: 'N/A', avg: 5 },
+                  );
+
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          🎯
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            Strict Critic
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Lowest overall average
+                          </p>
+                        </div>
+                      </div>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-orange-300 block truncate'>
+                            {realist.name}
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            Tough standards
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            User Avg
+                          </span>
+                          <span className='font-mono text-orange-400 font-extrabold text-sm'>
+                            {realist.avg}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Card 11: The Fence Sitter (Lowest Rating Variance) */}
+                {(() => {
+                  let fenceUser = 'N/A';
+                  let minVar = Infinity;
+
+                  users.forEach((u) => {
                     const uScores = Object.values(ratings[u] || {}).filter(
                       (s) => s > 0,
                     );
-                    const avg = uScores.length
-                      ? uScores.reduce((a, b) => a + b, 0) / uScores.length
-                      : 0;
-                    return avg > best.avg
-                      ? { name: u, avg: avg.toFixed(2) }
-                      : best;
-                  },
-                  { name: 'N/A', avg: 0 },
-                );
+                    if (uScores.length > 1) {
+                      const avg =
+                        uScores.reduce((a, b) => a + b, 0) / uScores.length;
+                      const variance =
+                        uScores.reduce(
+                          (acc, val) => acc + Math.pow(val - avg, 2),
+                          0,
+                        ) / uScores.length;
+                      if (variance < minVar) {
+                        minVar = variance;
+                        fenceUser = u;
+                      }
+                    }
+                  });
 
-                return (
-                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 flex items-center justify-center font-bold text-lg'>
-                        🌟
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          🪵
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            The Fence Sitter
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Lowest rating variance
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className='font-bold text-slate-100 text-sm'>
-                          Team Optimist
-                        </h3>
-                        <p className='text-[11px] text-slate-400'>
-                          Highest average rating given
-                        </p>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-violet-300 block truncate'>
+                            {fenceUser}
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            Consistent scoring
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Variance
+                          </span>
+                          <span className='font-mono text-violet-400 font-extrabold text-sm'>
+                            {minVar !== Infinity ? minVar.toFixed(2) : '0.00'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                      <div>
-                        <span className='font-bold text-base text-sky-300'>
-                          {optimist.name}
-                        </span>
-                        <span className='text-xs text-slate-400 block mt-0.5'>
-                          Generous Scoring
-                        </span>
-                      </div>
-                      <div className='text-right'>
-                        <span className='text-[10px] text-slate-400 block font-semibold'>
-                          User Average
-                        </span>
-                        <span className='font-mono text-sky-400 font-extrabold text-sm'>
-                          {optimist.avg} / 5
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
 
-              {/* Card 6: Strict Critic */}
-              {(() => {
-                const realist = users.reduce(
-                  (strict, u) => {
+                {/* Card 12: The Extremist (Highest Rating Variance) */}
+                {(() => {
+                  let extremeUser = 'N/A';
+                  let maxVar = -1;
+
+                  users.forEach((u) => {
                     const uScores = Object.values(ratings[u] || {}).filter(
                       (s) => s > 0,
                     );
-                    const avg = uScores.length
-                      ? uScores.reduce((a, b) => a + b, 0) / uScores.length
-                      : 5;
-                    return avg < strict.avg
-                      ? { name: u, avg: avg.toFixed(2) }
-                      : strict;
-                  },
-                  { name: 'N/A', avg: 5 },
-                );
-
-                return (
-                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400 flex items-center justify-center font-bold text-lg'>
-                        🎯
-                      </div>
-                      <div>
-                        <h3 className='font-bold text-slate-100 text-sm'>
-                          Strict Critic
-                        </h3>
-                        <p className='text-[11px] text-slate-400'>
-                          Lowest average rating given
-                        </p>
-                      </div>
-                    </div>
-                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                      <div>
-                        <span className='font-bold text-base text-orange-300'>
-                          {realist.name}
-                        </span>
-                        <span className='text-xs text-slate-400 block mt-0.5'>
-                          Tough Standards
-                        </span>
-                      </div>
-                      <div className='text-right'>
-                        <span className='text-[10px] text-slate-400 block font-semibold'>
-                          User Average
-                        </span>
-                        <span className='font-mono text-orange-400 font-extrabold text-sm'>
-                          {realist.avg} / 5
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Card 7: Lone Wolf */}
-              {(() => {
-                let maxDevUser = 'N/A';
-                let maxDevVal = -1;
-                users.forEach((u) => {
-                  let devSum = 0;
-                  let count = 0;
-                  towerMetrics.forEach((m) => {
-                    const s = getScore(u, m.tower);
-                    if (s > 0) {
-                      devSum += Math.abs(s - m.rawAvg);
-                      count++;
+                    if (uScores.length > 1) {
+                      const avg =
+                        uScores.reduce((a, b) => a + b, 0) / uScores.length;
+                      const variance =
+                        uScores.reduce(
+                          (acc, val) => acc + Math.pow(val - avg, 2),
+                          0,
+                        ) / uScores.length;
+                      if (variance > maxVar) {
+                        maxVar = variance;
+                        extremeUser = u;
+                      }
                     }
                   });
-                  const avgDev = count ? devSum / count : 0;
-                  if (avgDev > maxDevVal) {
-                    maxDevVal = avgDev;
-                    maxDevUser = u;
-                  }
-                });
 
-                return (
-                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-xl bg-pink-500/20 border border-pink-500/30 text-pink-400 flex items-center justify-center font-bold text-lg'>
-                        🐺
+                  return (
+                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center justify-center font-bold text-lg shrink-0'>
+                          🔥
+                        </div>
+                        <div>
+                          <h3 className='font-bold text-slate-100 text-sm'>
+                            The Extremist
+                          </h3>
+                          <p className='text-[11px] text-slate-400 line-clamp-1'>
+                            Highest rating variance
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className='font-bold text-slate-100 text-sm'>
-                          Lone Wolf
-                        </h3>
-                        <p className='text-[11px] text-slate-400'>
-                          Highest deviation from group average
-                        </p>
-                      </div>
-                    </div>
-                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                      <div>
-                        <span className='font-bold text-base text-pink-300'>
-                          {maxDevUser}
-                        </span>
-                        <span className='text-xs text-slate-400 block mt-0.5'>
-                          Unique Taste Profile
-                        </span>
-                      </div>
-                      <div className='text-right'>
-                        <span className='text-[10px] text-slate-400 block font-semibold'>
-                          Average Variance
-                        </span>
-                        <span className='font-mono text-pink-400 font-extrabold text-sm'>
-                          {maxDevVal.toFixed(2)} pts
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Card 8: Hive Mind (The opposite of Lone Wolf) */}
-              {(() => {
-                let minDevUser = 'N/A';
-                let minDevVal = Infinity;
-                users.forEach((u) => {
-                  let devSum = 0;
-                  let count = 0;
-                  towerMetrics.forEach((m) => {
-                    const s = getScore(u, m.tower);
-                    if (s > 0) {
-                      devSum += Math.abs(s - m.rawAvg);
-                      count++;
-                    }
-                  });
-                  const avgDev = count ? devSum / count : Infinity;
-                  if (avgDev < minDevVal) {
-                    minDevVal = avgDev;
-                    minDevUser = u;
-                  }
-                });
-
-                return (
-                  <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-lg'>
-                        🐝
-                      </div>
-                      <div>
-                        <h3 className='font-bold text-slate-100 text-sm'>
-                          Hive Mind
-                        </h3>
-                        <p className='text-[11px] text-slate-400'>
-                          Lowest deviation from group average
-                        </p>
+                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
+                        <div className='min-w-0'>
+                          <span className='font-bold text-sm text-red-300 block truncate'>
+                            {extremeUser}
+                          </span>
+                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
+                            Polarised spread
+                          </span>
+                        </div>
+                        <div className='text-right shrink-0'>
+                          <span className='text-[10px] text-slate-400 block font-semibold'>
+                            Variance
+                          </span>
+                          <span className='font-mono text-red-400 font-extrabold text-sm'>
+                            {maxVar !== -1 ? maxVar.toFixed(2) : '0.00'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center'>
-                      <div>
-                        <span className='font-bold text-base text-indigo-300'>
-                          {minDevVal !== Infinity ? minDevUser : 'N/A'}
-                        </span>
-                        <span className='text-xs text-slate-400 block mt-0.5'>
-                          Closest Group Alignment
-                        </span>
-                      </div>
-                      <div className='text-right'>
-                        <span className='text-[10px] text-slate-400 block font-semibold'>
-                          Average Variance
-                        </span>
-                        <span className='font-mono text-indigo-400 font-extrabold text-sm'>
-                          {minDevVal !== Infinity
-                            ? minDevVal.toFixed(2)
-                            : '0.00'}{' '}
-                          pts
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
             </div>
           </section>
         </main>
@@ -2064,8 +2362,8 @@ function App() {
                 📊 Group Preference by Tower Type
               </h2>
               <p className='text-sm text-slate-300'>
-                Aggregated preference metrics across Radar, Regional, and Metro
-                D classifications.
+                Aggregated and ranked preference metrics across Radar, Regional,
+                and Metro D classifications.
               </p>
             </div>
 
@@ -2114,8 +2412,8 @@ function App() {
                 🗺️ Group Preference by Australian State
               </h2>
               <p className='text-sm text-slate-300'>
-                Ranked state geographical appeal based on group ratings across
-                all 31 towers.
+                Aggregated and ranked preference metrics across Australian
+                states and territories based on group ratings.
               </p>
             </div>
 
@@ -2139,7 +2437,7 @@ function App() {
                       </span>
                     </div>
                     <div className='flex justify-between items-center text-sm pt-1'>
-                      <span className='text-slate-400'>Top Station</span>
+                      <span className='text-slate-400'>Top Pick</span>
                       <span className='font-bold text-emerald-400'>
                         {st.topTower}
                       </span>
@@ -2184,11 +2482,7 @@ function App() {
             <p className='text-sm text-slate-300 leading-relaxed'>
               Are you sure you want to reset all tower ratings for{' '}
               <strong className='text-sky-300'>{currentUser}</strong>? All 31
-              towers will revert to unrated status (
-              <code className='text-xs bg-slate-950 px-1.5 py-0.5 rounded-md border border-slate-800 text-slate-300 font-mono'>
-                0
-              </code>
-              ).
+              towers will revert to unrated status.
             </p>
 
             <div className='flex justify-end gap-3 pt-2'>
