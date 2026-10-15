@@ -58,7 +58,8 @@ const CONTROLLERS = [
   'Shannon',
 ].sort();
 
-const DEFAULT_SCORE = 0; // Default score is 0 (Unrated)
+const DEFAULT_SCORE = 3; // Unrated towers count as 3 in the draft and stats
+const UNRATED_SCORE = 0; // Stored value meaning "not rated"
 
 // State Badge styling lookup (Optimised contrast for dark mode)
 const STATE_BADGE_CLASSES = {
@@ -107,6 +108,944 @@ function CategoryBadge({ category }) {
   );
 }
 
+// Colour themes for the Category and State cards
+const COLOR_THEMES = {
+  slate: {
+    border: 'border-slate-500/60',
+    banner: 'bg-gradient-to-br from-slate-700/60 via-slate-800/40 to-slate-950',
+    pill: 'bg-slate-900 text-slate-100 border-slate-400/60',
+    rank: 'bg-slate-500/15 border-slate-500/40 text-slate-300',
+    avg: 'text-slate-200',
+    bar: 'bg-sky-500',
+  },
+  yellow: {
+    border: 'border-yellow-600/60',
+    banner:
+      'bg-gradient-to-br from-yellow-800/60 via-yellow-900/40 to-slate-950',
+    pill: 'bg-yellow-950 text-yellow-200 border-yellow-400/70',
+    rank: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300',
+    avg: 'text-yellow-300',
+    bar: 'bg-yellow-500',
+  },
+  red: {
+    border: 'border-red-600/60',
+    banner: 'bg-gradient-to-br from-red-800/60 via-red-900/40 to-slate-950',
+    pill: 'bg-red-950 text-red-200 border-red-400/70',
+    rank: 'bg-red-500/15 border-red-500/40 text-red-300',
+    avg: 'text-red-300',
+    bar: 'bg-red-500',
+  },
+  pink: {
+    border: 'border-pink-600/60',
+    banner: 'bg-gradient-to-br from-pink-800/60 via-pink-900/40 to-slate-950',
+    pill: 'bg-pink-950 text-pink-200 border-pink-400/70',
+    rank: 'bg-pink-500/15 border-pink-500/40 text-pink-300',
+    avg: 'text-pink-300',
+    bar: 'bg-pink-500',
+  },
+  cyan: {
+    border: 'border-cyan-600/60',
+    banner: 'bg-gradient-to-br from-cyan-800/60 via-cyan-900/40 to-slate-950',
+    pill: 'bg-cyan-950 text-cyan-200 border-cyan-400/70 shadow-cyan-900/60',
+    rank: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300',
+    avg: 'text-cyan-300',
+    bar: 'bg-cyan-500',
+  },
+  violet: {
+    border: 'border-violet-600/60',
+    banner:
+      'bg-gradient-to-br from-violet-800/60 via-violet-900/40 to-slate-950',
+    pill: 'bg-violet-950 text-violet-200 border-violet-400/70 shadow-violet-900/60',
+    rank: 'bg-violet-500/15 border-violet-500/40 text-violet-300',
+    avg: 'text-violet-300',
+    bar: 'bg-violet-500',
+  },
+  fuchsia: {
+    border: 'border-fuchsia-600/60',
+    banner:
+      'bg-gradient-to-br from-fuchsia-800/60 via-fuchsia-900/40 to-slate-950',
+    pill: 'bg-fuchsia-950 text-fuchsia-200 border-fuchsia-400/70 shadow-fuchsia-900/60',
+    rank: 'bg-fuchsia-500/15 border-fuchsia-500/40 text-fuchsia-300',
+    avg: 'text-fuchsia-300',
+    bar: 'bg-fuchsia-500',
+  },
+  indigo: {
+    border: 'border-indigo-600/60',
+    banner:
+      'bg-gradient-to-br from-indigo-800/60 via-indigo-900/40 to-slate-950',
+    pill: 'bg-indigo-950 text-indigo-200 border-indigo-400/70 shadow-indigo-900/60',
+    rank: 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300',
+    avg: 'text-indigo-300',
+    bar: 'bg-indigo-500',
+  },
+  sky: {
+    border: 'border-sky-600/60',
+    banner: 'bg-gradient-to-br from-sky-800/60 via-sky-900/40 to-slate-950',
+    pill: 'bg-sky-950 text-sky-200 border-sky-400/70 shadow-sky-900/60',
+    rank: 'bg-sky-500/15 border-sky-500/40 text-sky-300',
+    avg: 'text-sky-300',
+    bar: 'bg-sky-500',
+  },
+  rose: {
+    border: 'border-rose-600/60',
+    banner: 'bg-gradient-to-br from-rose-800/60 via-rose-900/40 to-slate-950',
+    pill: 'bg-rose-950 text-rose-200 border-rose-400/70 shadow-rose-900/60',
+    rank: 'bg-rose-500/15 border-rose-500/40 text-rose-300',
+    avg: 'text-rose-300',
+    bar: 'bg-rose-500',
+  },
+  amber: {
+    border: 'border-amber-600/60',
+    banner: 'bg-gradient-to-br from-amber-800/60 via-amber-900/40 to-slate-950',
+    pill: 'bg-amber-950 text-amber-200 border-amber-400/70 shadow-amber-900/60',
+    rank: 'bg-amber-500/15 border-amber-500/40 text-amber-300',
+    avg: 'text-amber-300',
+    bar: 'bg-amber-500',
+  },
+  emerald: {
+    border: 'border-emerald-600/60',
+    banner:
+      'bg-gradient-to-br from-emerald-800/60 via-emerald-900/40 to-slate-950',
+    pill: 'bg-emerald-950 text-emerald-200 border-emerald-400/70 shadow-emerald-900/60',
+    rank: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
+    avg: 'text-emerald-300',
+    bar: 'bg-emerald-500',
+  },
+  teal: {
+    border: 'border-teal-600/60',
+    banner: 'bg-gradient-to-br from-teal-800/60 via-teal-900/40 to-slate-950',
+    pill: 'bg-teal-950 text-teal-200 border-teal-400/70 shadow-teal-900/60',
+    rank: 'bg-teal-500/15 border-teal-500/40 text-teal-300',
+    avg: 'text-teal-300',
+    bar: 'bg-teal-500',
+  },
+  orange: {
+    border: 'border-orange-600/60',
+    banner:
+      'bg-gradient-to-br from-orange-800/60 via-orange-900/40 to-slate-950',
+    pill: 'bg-orange-950 text-orange-200 border-orange-400/70 shadow-orange-900/60',
+    rank: 'bg-orange-500/15 border-orange-500/40 text-orange-300',
+    avg: 'text-orange-300',
+    bar: 'bg-orange-500',
+  },
+  purple: {
+    border: 'border-purple-600/60',
+    banner:
+      'bg-gradient-to-br from-purple-800/60 via-purple-900/40 to-slate-950',
+    pill: 'bg-purple-950 text-purple-200 border-purple-400/70 shadow-purple-900/60',
+    rank: 'bg-purple-500/15 border-purple-500/40 text-purple-300',
+    avg: 'text-purple-300',
+    bar: 'bg-purple-500',
+  },
+};
+
+const CATEGORY_THEME = {
+  Radar: 'cyan',
+  Regional: 'violet',
+  'Metro D': 'fuchsia',
+};
+const STATE_THEME = {
+  VIC: 'indigo',
+  NSW: 'sky',
+  QLD: 'rose',
+  WA: 'amber',
+  SA: 'emerald',
+  TAS: 'teal',
+  NT: 'orange',
+  ACT: 'purple',
+};
+const STATE_NAMES = {
+  VIC: 'Victoria',
+  NSW: 'New South Wales',
+  QLD: 'Queensland',
+  WA: 'Western Australia',
+  SA: 'South Australia',
+  TAS: 'Tasmania',
+  NT: 'Northern Territory',
+  ACT: 'Australian Capital Territory',
+};
+
+// Colour tints for the trivia cards
+const TRIVIA_TINTS = {
+  amber: {
+    icon: 'bg-amber-500/20 border-amber-500/30 text-amber-400',
+    main: 'text-amber-300',
+    value: 'text-amber-400',
+  },
+  cyan: {
+    icon: 'bg-cyan-500/20 border-cyan-500/30 text-cyan-400',
+    main: 'text-cyan-300',
+    value: 'text-cyan-400',
+  },
+  yellow: {
+    icon: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400',
+    main: 'text-yellow-300',
+    value: 'text-yellow-400',
+  },
+  rose: {
+    icon: 'bg-rose-500/20 border-rose-500/30 text-rose-400',
+    main: 'text-rose-300',
+    value: 'text-rose-400',
+  },
+  sky: {
+    icon: 'bg-sky-500/20 border-sky-500/30 text-sky-400',
+    main: 'text-sky-300',
+    value: 'text-sky-400',
+  },
+  orange: {
+    icon: 'bg-orange-500/20 border-orange-500/30 text-orange-400',
+    main: 'text-orange-300',
+    value: 'text-orange-400',
+  },
+  violet: {
+    icon: 'bg-violet-500/20 border-violet-500/30 text-violet-400',
+    main: 'text-violet-300',
+    value: 'text-violet-400',
+  },
+  red: {
+    icon: 'bg-red-500/20 border-red-500/30 text-red-400',
+    main: 'text-red-300',
+    value: 'text-red-400',
+  },
+  teal: {
+    icon: 'bg-teal-500/20 border-teal-500/30 text-teal-400',
+    main: 'text-teal-300',
+    value: 'text-teal-400',
+  },
+  purple: {
+    icon: 'bg-purple-500/20 border-purple-500/30 text-purple-400',
+    main: 'text-purple-300',
+    value: 'text-purple-400',
+  },
+  indigo: {
+    icon: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400',
+    main: 'text-indigo-300',
+    value: 'text-indigo-400',
+  },
+  pink: {
+    icon: 'bg-pink-500/20 border-pink-500/30 text-pink-400',
+    main: 'text-pink-300',
+    value: 'text-pink-400',
+  },
+};
+
+// ----------------------------------------------------------------------------
+// DESIGN SYSTEM
+// PlainCard is the neutral card used everywhere. Only the Category and State
+// stat cards use ThemedCard (coloured gradient banner + name pill).
+// ----------------------------------------------------------------------------
+function ThemedCard({
+  theme,
+  lead,
+  pill,
+  aside,
+  children,
+  className = '',
+  bodyClassName = 'p-4',
+  flashClass = '',
+  ...rest
+}) {
+  const t = COLOR_THEMES[theme] || COLOR_THEMES.sky;
+  return (
+    <div
+      {...rest}
+      className={`relative rounded-3xl flex flex-col shadow-xl overflow-hidden border-2 min-w-0 transition-all duration-300 ${t.border} ${flashClass} ${className}`}
+    >
+      <div
+        className={`px-4 py-3.5 flex flex-wrap items-center gap-3 ${t.banner}`}
+      >
+        {lead}
+        <span
+          className={`inline-block rounded-xl border font-bold tracking-wide text-sm px-3.5 py-1 min-w-0 break-words ${t.pill}`}
+        >
+          {pill}
+        </span>
+        {aside && (
+          <div className='ml-auto flex items-center gap-2 shrink-0'>
+            {aside}
+          </div>
+        )}
+      </div>
+      <div className={`bg-slate-950/80 flex-1 ${bodyClassName}`}>
+        {children}
+      </div>
+      {flashClass && (
+        <span
+          aria-hidden='true'
+          className={`absolute inset-0 pointer-events-none ${flashClass}`}
+        ></span>
+      )}
+    </div>
+  );
+}
+
+// Coloured square icon / rank box for the stat-card banners
+function LeadBox({ theme, children }) {
+  const t = COLOR_THEMES[theme] || COLOR_THEMES.sky;
+  return (
+    <span
+      aria-hidden='true'
+      className={`w-9 h-9 rounded-xl border text-base font-extrabold flex items-center justify-center shrink-0 ${t.rank}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+// Subtle per-card colour for the trivia cards
+const TRIVIA_SOFT = {
+  amber: {
+    card: 'bg-gradient-to-br from-amber-500/10 to-slate-950/80 border-amber-500/25',
+    icon: 'bg-amber-500/10 border-amber-500/25 text-amber-300',
+    text: 'text-amber-300',
+  },
+  cyan: {
+    card: 'bg-gradient-to-br from-cyan-500/10 to-slate-950/80 border-cyan-500/25',
+    icon: 'bg-cyan-500/10 border-cyan-500/25 text-cyan-300',
+    text: 'text-cyan-300',
+  },
+  yellow: {
+    card: 'bg-gradient-to-br from-yellow-500/10 to-slate-950/80 border-yellow-500/25',
+    icon: 'bg-yellow-500/10 border-yellow-500/25 text-yellow-300',
+    text: 'text-yellow-300',
+  },
+  rose: {
+    card: 'bg-gradient-to-br from-rose-500/10 to-slate-950/80 border-rose-500/25',
+    icon: 'bg-rose-500/10 border-rose-500/25 text-rose-300',
+    text: 'text-rose-300',
+  },
+  sky: {
+    card: 'bg-gradient-to-br from-sky-500/10 to-slate-950/80 border-sky-500/25',
+    icon: 'bg-sky-500/10 border-sky-500/25 text-sky-300',
+    text: 'text-sky-300',
+  },
+  orange: {
+    card: 'bg-gradient-to-br from-orange-500/10 to-slate-950/80 border-orange-500/25',
+    icon: 'bg-orange-500/10 border-orange-500/25 text-orange-300',
+    text: 'text-orange-300',
+  },
+  violet: {
+    card: 'bg-gradient-to-br from-violet-500/10 to-slate-950/80 border-violet-500/25',
+    icon: 'bg-violet-500/10 border-violet-500/25 text-violet-300',
+    text: 'text-violet-300',
+  },
+  red: {
+    card: 'bg-gradient-to-br from-red-500/10 to-slate-950/80 border-red-500/25',
+    icon: 'bg-red-500/10 border-red-500/25 text-red-300',
+    text: 'text-red-300',
+  },
+  teal: {
+    card: 'bg-gradient-to-br from-teal-500/10 to-slate-950/80 border-teal-500/25',
+    icon: 'bg-teal-500/10 border-teal-500/25 text-teal-300',
+    text: 'text-teal-300',
+  },
+  purple: {
+    card: 'bg-gradient-to-br from-purple-500/10 to-slate-950/80 border-purple-500/25',
+    icon: 'bg-purple-500/10 border-purple-500/25 text-purple-300',
+    text: 'text-purple-300',
+  },
+  indigo: {
+    card: 'bg-gradient-to-br from-indigo-500/10 to-slate-950/80 border-indigo-500/25',
+    icon: 'bg-indigo-500/10 border-indigo-500/25 text-indigo-300',
+    text: 'text-indigo-300',
+  },
+  pink: {
+    card: 'bg-gradient-to-br from-pink-500/10 to-slate-950/80 border-pink-500/25',
+    icon: 'bg-pink-500/10 border-pink-500/25 text-pink-300',
+    text: 'text-pink-300',
+  },
+};
+
+// Neutral icon box
+function IconBox({
+  children,
+  className = 'bg-slate-800/80 border-slate-700/60 text-slate-200',
+}) {
+  return (
+    <span
+      aria-hidden='true'
+      className={`w-9 h-9 rounded-xl border text-base font-extrabold flex items-center justify-center shrink-0 ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+// Neutral card: optional icon + plain title row, then the body.
+// tone='success' gives the green "locked" look.
+function PlainCard({
+  title,
+  pill,
+  lead,
+  aside,
+  children,
+  tone = 'default',
+  toneClass: toneOverride,
+  className = '',
+  bodyClassName,
+  flashClass = '',
+  tooltip,
+  theme, // ignored: only ThemedCard uses colour themes
+  ...rest
+}) {
+  const heading = title || pill;
+  const hasHeader = lead || heading || aside;
+  const toneClass =
+    toneOverride ||
+    (tone === 'success'
+      ? 'bg-emerald-950/40 border-emerald-500/80 ring-1 ring-emerald-500/40'
+      : 'bg-slate-950/80 border-slate-800/80');
+  return (
+    <div
+      {...rest}
+      title={tooltip}
+      className={`relative rounded-2xl flex flex-col border shadow-inner min-w-0 overflow-hidden transition duration-200 ${toneClass} ${flashClass} ${className}`}
+    >
+      {hasHeader && (
+        <div className='px-4 pt-4 flex flex-wrap items-center gap-3'>
+          {lead}
+          {heading && (
+            <span className='font-bold text-slate-100 text-base min-w-0 break-words'>
+              {heading}
+            </span>
+          )}
+          {aside && (
+            <div className='ml-auto flex items-center gap-2 shrink-0'>
+              {aside}
+            </div>
+          )}
+        </div>
+      )}
+      <div
+        className={`flex-1 ${bodyClassName || (hasHeader ? 'px-4 pb-4 pt-3' : 'p-4')}`}
+      >
+        {children}
+      </div>
+      {flashClass && (
+        <span
+          aria-hidden='true'
+          className={`absolute inset-0 pointer-events-none ${flashClass}`}
+        ></span>
+      )}
+    </div>
+  );
+}
+
+// Trivia card: icon, funny name, a one-line description, the answer and its number
+function TriviaCard({
+  icon,
+  tint,
+  title,
+  subtitle,
+  name,
+  badges,
+  detail,
+  label,
+  value,
+}) {
+  const s = TRIVIA_SOFT[tint];
+  return (
+    <PlainCard
+      toneClass={s.card}
+      lead={<IconBox className={s.icon}>{icon}</IconBox>}
+      title={title}
+      bodyClassName='px-4 pb-4 pt-3 flex flex-col gap-3'
+    >
+      <p className='text-xs text-slate-400'>{subtitle}</p>
+      <div className='bg-slate-900/70 border border-slate-800/80 rounded-xl p-3.5 shadow-inner flex-1'>
+        <span className={`font-bold text-lg block break-words ${s.text}`}>
+          {name}
+        </span>
+        {badges && (
+          <div className='flex flex-wrap items-center gap-1 mt-1.5'>
+            {badges}
+          </div>
+        )}
+        {detail && (
+          <span className='text-xs text-slate-400 block mt-1.5'>{detail}</span>
+        )}
+      </div>
+      <div className='flex justify-between items-center gap-4 text-sm px-1'>
+        <span className='text-slate-400 font-medium'>{label}</span>
+        <span className={`font-mono font-extrabold ${s.text}`}>{value}</span>
+      </div>
+    </PlainCard>
+  );
+}
+
+// Card for one Tower Type or one State
+function GroupCard({ kind, rank, theme, label, count, avg, avgLabel, rows }) {
+  const t = COLOR_THEMES[theme];
+  return (
+    <ThemedCard
+      theme={theme}
+      lead={<LeadBox theme={theme}>#{rank}</LeadBox>}
+      pill={
+        <>
+          <span className='sr-only'>{kind}: </span>
+          {label}
+        </>
+      }
+      aside={
+        <span className='text-xs font-mono text-slate-200 font-semibold'>
+          {count} {count === 1 ? 'Tower' : 'Towers'}
+        </span>
+      }
+      bodyClassName='p-5 space-y-3'
+    >
+      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-4 shadow-inner'>
+        <div className='flex items-center justify-between gap-3'>
+          <span className='text-xs font-bold text-slate-400 uppercase tracking-wider'>
+            {avgLabel}
+          </span>
+          <div className='flex items-baseline gap-1'>
+            <span className={`font-extrabold text-2xl ${t.avg}`}>{avg}</span>
+            <span className='text-xs text-slate-500 font-medium'>/ 5</span>
+          </div>
+        </div>
+        <div className='w-full bg-slate-800/80 h-1.5 rounded-full overflow-hidden mt-3'>
+          <div
+            className={`h-full ${t.bar}`}
+            style={{ width: `${Math.min(100, (parseFloat(avg) / 5) * 100)}%` }}
+          ></div>
+        </div>
+      </div>
+
+      <div className='space-y-2.5 text-sm'>
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'
+          >
+            <span className='text-slate-300 font-medium shrink-0'>
+              {r.label}
+            </span>
+            <span
+              className={`font-bold text-right min-w-0 break-words ${r.tone}`}
+            >
+              {r.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </ThemedCard>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// RANK HELPER
+// Asks "which do you prefer?" about two towers at a time and turns the answers
+// into 1-5 ratings. Pairs are chosen so every tower is compared a few times,
+// against towers that currently look similar to it (Elo-style scoring).
+// ----------------------------------------------------------------------------
+const RATING_LABELS = {
+  5: 'Love it',
+  4: 'Like it',
+  3: 'Fine',
+  2: 'Meh',
+  1: 'Avoid',
+};
+
+const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+
+function pickPair(pool, st) {
+  const minCount = Math.min(...pool.map((t) => st.counts[t]));
+  const starters = pool.filter((t) => st.counts[t] === minCount);
+  const a = starters[Math.floor(Math.random() * starters.length)];
+  const others = pool.filter((t) => t !== a);
+  const fresh = others.filter((t) => !st.faced[pairKey(a, t)]);
+  const cands = fresh.length > 0 ? fresh : others;
+  // Closest current score first; towers with fewer comparisons are favoured
+  const cost = (t) =>
+    Math.abs(st.elo[t] - st.elo[a]) + 15 * st.counts[t] + Math.random() * 20;
+  const b = [...cands].sort((x, y) => cost(x) - cost(y))[0];
+  return Math.random() < 0.5 ? [a, b] : [b, a];
+}
+
+function ChoiceCard({ tower, hint, onPick }) {
+  const meta = TOWER_METADATA[tower];
+  return (
+    <PlainCard
+      role='button'
+      tabIndex={0}
+      aria-label={`I prefer ${tower}`}
+      onClick={onPick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onPick();
+        }
+      }}
+      className='cursor-pointer hover:border-sky-500/70 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
+      title={tower}
+      bodyClassName='px-5 pb-5 pt-3 flex flex-col gap-4'
+    >
+      <div className='flex flex-wrap items-center gap-1.5'>
+        <CategoryBadge category={meta.category} />
+        <StateBadge state={meta.state} />
+      </div>
+      <span className='text-sm font-bold text-sky-300'>{hint}</span>
+    </PlainCard>
+  );
+}
+
+function RankHelper({ userRatings, onApply, onClose }) {
+  const unrated = ALL_TOWERS.filter((t) => !(userRatings[t] > 0));
+  const [phase, setPhase] = useState('setup'); // setup | compare | review
+  const [scope, setScope] = useState(unrated.length >= 2 ? 'unrated' : 'all');
+  const [pool, setPool] = useState([]);
+  const [st, setSt] = useState(null);
+  const [pair, setPair] = useState(null);
+  const [draft, setDraft] = useState({});
+
+  const target = Math.max(1, Math.min(4, pool.length - 1));
+
+  const start = () => {
+    const list = scope === 'unrated' ? unrated : ALL_TOWERS;
+    const elo = {};
+    const counts = {};
+    list.forEach((t) => {
+      elo[t] = 1000;
+      counts[t] = 0;
+    });
+    const fresh = { elo, counts, faced: {}, history: [], total: 0 };
+    setPool(list);
+    setSt(fresh);
+    setPair(pickPair(list, fresh));
+    setPhase('compare');
+  };
+
+  // Turn the scores into ratings: best fifth gets 5, next fifth 4, and so on
+  const goReview = (state, list) => {
+    const sorted = [...list].sort(
+      (a, b) =>
+        state.elo[b] - state.elo[a] ||
+        state.counts[b] - state.counts[a] ||
+        a.localeCompare(b),
+    );
+    const map = {};
+    sorted.forEach((t, i) => {
+      map[t] = 5 - Math.floor((i * 5) / sorted.length);
+    });
+    setDraft(map);
+    setPhase('review');
+  };
+
+  const choose = (winner) => {
+    if (!pair) return;
+    const [a, b] = pair;
+    const ea = 1 / (1 + Math.pow(10, (st.elo[b] - st.elo[a]) / 400));
+    const sa = winner === a ? 1 : winner === b ? 0 : 0.5;
+    const K = 40;
+    const next = {
+      elo: {
+        ...st.elo,
+        [a]: st.elo[a] + K * (sa - ea),
+        [b]: st.elo[b] + K * (1 - sa - (1 - ea)),
+      },
+      counts: { ...st.counts, [a]: st.counts[a] + 1, [b]: st.counts[b] + 1 },
+      faced: { ...st.faced, [pairKey(a, b)]: true },
+      history: [
+        ...st.history,
+        { elo: st.elo, counts: st.counts, faced: st.faced, pair },
+      ],
+      total: st.total + 1,
+    };
+    setSt(next);
+    if (pool.every((t) => next.counts[t] >= target)) {
+      goReview(next, pool);
+    } else {
+      setPair(pickPair(pool, next));
+    }
+  };
+
+  const undo = () => {
+    if (!st || st.history.length === 0) return;
+    const last = st.history[st.history.length - 1];
+    setSt({
+      elo: last.elo,
+      counts: last.counts,
+      faced: last.faced,
+      history: st.history.slice(0, -1),
+      total: st.total - 1,
+    });
+    setPair(last.pair);
+  };
+
+  const nudge = (tower, delta) =>
+    setDraft((d) => ({
+      ...d,
+      [tower]: Math.min(5, Math.max(1, d[tower] + delta)),
+    }));
+
+  // Keyboard: left/right to choose, down for "about the same", Esc to close
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (phase !== 'compare' || !pair) return;
+      if (e.key === 'ArrowLeft') choose(pair[0]);
+      else if (e.key === 'ArrowRight') choose(pair[1]);
+      else if (e.key === 'ArrowDown') choose(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  const progress =
+    st && pool.length
+      ? Math.round(
+          (pool.reduce((s, t) => s + Math.min(st.counts[t], target), 0) /
+            (pool.length * target)) *
+            100,
+        )
+      : 0;
+  const everyoneSeen = st && pool.every((t) => st.counts[t] >= 1);
+  const estimate = (n) => Math.ceil((n * Math.min(4, n - 1)) / 2);
+  const listForScope = scope === 'unrated' ? unrated : ALL_TOWERS;
+
+  const buttonBase =
+    'px-4 py-2.5 text-xs font-bold rounded-2xl transition duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:opacity-40 disabled:cursor-not-allowed';
+  const ghost = `${buttonBase} bg-slate-800 hover:bg-slate-700 text-slate-200`;
+  const primary = `${buttonBase} bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-950`;
+
+  return (
+    <div
+      className='fixed inset-0 z-50 overflow-y-auto p-4 bg-slate-950/85 backdrop-blur-md'
+      role='dialog'
+      aria-modal='true'
+      aria-labelledby='helper-title'
+    >
+      <PlainCard
+        className='max-w-3xl w-full mx-auto my-6 shadow-2xl bg-slate-900'
+        lead={<IconBox>🧭</IconBox>}
+        title={<span id='helper-title'>Help Me Decide</span>}
+        aside={
+          <button onClick={onClose} className={ghost} aria-label='Close helper'>
+            ✕ Close
+          </button>
+        }
+        bodyClassName='px-5 pb-5 md:px-6 md:pb-6 pt-4 space-y-5'
+      >
+        {phase === 'setup' && (
+          <>
+            <p className='text-sm text-slate-300 leading-relaxed'>
+              I'll show you two towers at a time. Pick the one you prefer and
+              I'll turn your answers into 1 to 5 ratings. You can review and
+              change them before anything is saved.
+            </p>
+            <div
+              className='grid grid-cols-1 sm:grid-cols-2 gap-3'
+              role='group'
+              aria-label='Which towers to rank'
+            >
+              {[
+                {
+                  id: 'unrated',
+                  title: 'Unrated towers only',
+                  count: unrated.length,
+                },
+                { id: 'all', title: 'All towers', count: ALL_TOWERS.length },
+              ].map((opt) => {
+                const disabled = opt.id === 'unrated' && unrated.length < 2;
+                return (
+                  <button
+                    key={opt.id}
+                    disabled={disabled}
+                    aria-pressed={scope === opt.id}
+                    onClick={() => setScope(opt.id)}
+                    className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                      scope === opt.id
+                        ? 'border-sky-500/70 bg-sky-950/40'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-600'
+                    }`}
+                  >
+                    <span className='font-bold text-slate-100 block'>
+                      {opt.title}
+                    </span>
+                    <span className='text-xs text-slate-400'>
+                      {opt.count} {opt.count === 1 ? 'tower' : 'towers'}
+                      {opt.id === 'all' &&
+                        ' (replaces your existing ratings if you apply)'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className='text-xs text-slate-400'>
+              About {estimate(listForScope.length)} questions. You can stop and
+              finish early once every tower has been compared once.
+            </p>
+            <div className='flex justify-end'>
+              <button onClick={start} className={primary}>
+                Start
+              </button>
+            </div>
+          </>
+        )}
+
+        {phase === 'compare' && pair && (
+          <>
+            <div>
+              <div className='flex items-center justify-between text-xs text-slate-400 mb-1.5'>
+                <span>Question {st.total + 1}</span>
+                <span>{progress}% sorted</span>
+              </div>
+              <div
+                className='w-full bg-slate-800/80 h-2 rounded-full overflow-hidden'
+                role='progressbar'
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className='bg-sky-500 h-full transition-all duration-300'
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <h3 className='text-lg font-bold text-slate-100 text-center'>
+              Which tower do you prefer?
+            </h3>
+
+            <div className='grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-stretch gap-3'>
+              <ChoiceCard
+                key={`l-${pair[0]}`}
+                tower={pair[0]}
+                hint='← Choose this one'
+                onPick={() => choose(pair[0])}
+              />
+              <span className='self-center text-center text-xs font-bold text-slate-500 uppercase'>
+                vs
+              </span>
+              <ChoiceCard
+                key={`r-${pair[1]}`}
+                tower={pair[1]}
+                hint='Choose this one →'
+                onPick={() => choose(pair[1])}
+              />
+            </div>
+
+            <div className='flex flex-wrap items-center justify-between gap-3'>
+              <button onClick={() => choose(null)} className={ghost}>
+                About the same
+              </button>
+              <div className='flex items-center gap-2'>
+                <button
+                  onClick={undo}
+                  disabled={st.history.length === 0}
+                  className={ghost}
+                >
+                  ↶ Undo
+                </button>
+                <button
+                  onClick={() => goReview(st, pool)}
+                  disabled={!everyoneSeen}
+                  className={primary}
+                  title={
+                    everyoneSeen
+                      ? 'See the ratings so far'
+                      : 'Every tower needs at least one comparison first'
+                  }
+                >
+                  Finish now
+                </button>
+              </div>
+            </div>
+            <p className='text-[11px] text-slate-500'>
+              Tip: use the ← and → keys to choose, ↓ for about the same.
+            </p>
+          </>
+        )}
+
+        {phase === 'review' && (
+          <>
+            <p className='text-sm text-slate-300'>
+              Here's how your answers rank. Use ▲ ▼ to move a tower up or down a
+              rating, then apply.
+            </p>
+            <div className='space-y-4'>
+              {[5, 4, 3, 2, 1].map((r) => {
+                const towers = Object.keys(draft)
+                  .filter((t) => draft[t] === r)
+                  .sort((a, b) => st.elo[b] - st.elo[a] || a.localeCompare(b));
+                return (
+                  <PlainCard
+                    key={r}
+                    lead={<IconBox>{r}</IconBox>}
+                    title={RATING_LABELS[r]}
+                    aside={
+                      <span className='text-xs font-mono text-slate-200 font-semibold'>
+                        {towers.length}{' '}
+                        {towers.length === 1 ? 'Tower' : 'Towers'}
+                      </span>
+                    }
+                    bodyClassName='p-3'
+                  >
+                    {towers.length === 0 ? (
+                      <p className='text-xs text-slate-500 px-1 py-1'>
+                        No towers at this rating.
+                      </p>
+                    ) : (
+                      <ul className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
+                        {towers.map((tower) => (
+                          <li
+                            key={tower}
+                            className='flex items-center justify-between gap-2 bg-slate-900/60 border border-slate-800/60 rounded-xl px-3 py-2'
+                          >
+                            <span className='text-sm font-semibold text-slate-100 min-w-0 break-words'>
+                              {tower}
+                            </span>
+                            <span className='flex items-center gap-1 shrink-0'>
+                              <button
+                                onClick={() => nudge(tower, -1)}
+                                disabled={r === 1}
+                                aria-label={`Lower ${tower} to ${r - 1}`}
+                                className='w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
+                              >
+                                ▼
+                              </button>
+                              <button
+                                onClick={() => nudge(tower, 1)}
+                                disabled={r === 5}
+                                aria-label={`Raise ${tower} to ${r + 1}`}
+                                className='w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
+                              >
+                                ▲
+                              </button>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </PlainCard>
+                );
+              })}
+            </div>
+            <div className='flex flex-wrap justify-between gap-3'>
+              <button onClick={() => setPhase('compare')} className={ghost}>
+                Keep comparing
+              </button>
+              <button
+                onClick={() => {
+                  onApply(draft);
+                  onClose();
+                }}
+                className={primary}
+              >
+                Apply {Object.keys(draft).length} ratings
+              </button>
+            </div>
+          </>
+        )}
+      </PlainCard>
+    </div>
+  );
+}
+
 function App() {
   const [users] = useState(CONTROLLERS);
   const [currentUser, setCurrentUser] = useState(
@@ -118,6 +1057,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showHelper, setShowHelper] = useState(false);
 
   // Hot to Not Table Search & Filter State
   const [matrixSearch, setMatrixSearch] = useState('');
@@ -131,7 +1071,15 @@ function App() {
   });
 
   const cancelButtonRef = useRef(null);
-  const isSavingRef = useRef(false);
+  // Rating saves: every click is applied to the latest ratings immediately,
+  // saves are sent one at a time in click order, and cloud polls are ignored
+  // while a save is pending so they can't overwrite a newer rating.
+  const ratingsRef = useRef({});
+  const pendingSavesRef = useRef(0);
+  const saveChainRef = useRef(Promise.resolve());
+  const saveVersionRef = useRef(0);
+  const lastSaveEndRef = useRef(0);
+  const toastTimerRef = useRef(null);
   const lastDraftKeyRef = useRef(null);
 
   // Default Target List Slots (6 slots, allowing duplicates)
@@ -151,9 +1099,12 @@ function App() {
   // { id, users: { [controller]: { from, to } } }
   const [tieFlash, setTieFlash] = useState(null);
   const tieFlashTimerRef = useRef(null);
-  // Set to { user, tower } (the form row clicked to lock/unlock), so the next
-  // redraft flashes the towers that move, except the row that was clicked.
-  const lockFlashPendingRef = useRef(null);
+  // The form row the person just clicked to lock/unlock, so it isn't flashed.
+  const clickedRowRef = useRef(null);
+  // Form rows that changed position: { id, rows: { [controller]: [towers] } }
+  const [rowFlash, setRowFlash] = useState(null);
+  const rowFlashTimerRef = useRef(null);
+  const prevFormOrdersRef = useRef(null);
 
   // Hot to Not table sorting: key is 'tower', 'avg', or a controller name
   const [matrixSort, setMatrixSort] = useState({ key: 'avg', dir: 'desc' });
@@ -161,12 +1112,17 @@ function App() {
   // Manual Locks State: { [user]: towerName }
   const [manualLocks, setManualLocks] = useState({});
 
+  const applyRatings = (next) => {
+    ratingsRef.current = next;
+    setRatings(next);
+  };
+
   // Initial load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('atc_tower_rankings_gsheet');
     if (saved) {
       try {
-        setRatings(JSON.parse(saved));
+        applyRatings(JSON.parse(saved));
       } catch (e) {
         console.error(e);
       }
@@ -190,7 +1146,7 @@ function App() {
 
   // Fetch live ratings from Cloud API
   const fetchCloudRatings = async () => {
-    if (isSavingRef.current) return;
+    if (pendingSavesRef.current > 0) return;
 
     if (
       !GOOGLE_SHEET_API_URL ||
@@ -199,18 +1155,23 @@ function App() {
       setSyncStatus('Local Mode');
       return;
     }
+    const versionAtStart = saveVersionRef.current;
     try {
       const res = await fetch(GOOGLE_SHEET_API_URL);
       if (res.ok) {
         const cloudData = await res.json();
+        // Drop this response if a rating was saved while it was in flight
         if (
-          !isSavingRef.current &&
-          cloudData &&
-          typeof cloudData === 'object'
+          pendingSavesRef.current > 0 ||
+          versionAtStart !== saveVersionRef.current ||
+          Date.now() - lastSaveEndRef.current < 3000
         ) {
+          return;
+        }
+        if (cloudData && typeof cloudData === 'object') {
           const cloudJson = JSON.stringify(cloudData);
           if (cloudJson !== localStorage.getItem('atc_tower_rankings_gsheet')) {
-            setRatings(cloudData);
+            applyRatings(cloudData);
             localStorage.setItem('atc_tower_rankings_gsheet', cloudJson);
           }
           setSyncStatus('Synced');
@@ -242,7 +1203,12 @@ function App() {
   // Lock/unlock `tower` as controller `u`'s #1. Used by the form guide rows and
   // the Assigned Placements cards. `fromCard` stops that card flashing itself.
   const toggleLock = (u, tower, fromCard = false) => {
-    lockFlashPendingRef.current = { user: u, tower, fromCard };
+    clickedRowRef.current = {
+      user: u,
+      tower,
+      fromCard,
+      until: Date.now() + 800,
+    };
     setManualLocks((prev) => {
       const next = { ...prev };
 
@@ -283,103 +1249,129 @@ function App() {
     tieFlashTimerRef.current = setTimeout(() => setTieFlash(null), 2200);
   };
 
-  const handleRatingChange = async (tower, score) => {
-    isSavingRef.current = true;
-    const activeUser = currentUser;
+  const cloudEnabled = () =>
+    GOOGLE_SHEET_API_URL &&
+    !GOOGLE_SHEET_API_URL.includes('YOUR_GOOGLE_APPS_SCRIPT');
 
-    setSaveToast({ visible: true, user: activeUser, isSuccess: false });
+  // Queue one save. Saves run strictly in click order.
+  const queueSave = (payload) => {
+    pendingSavesRef.current += 1;
+    saveVersionRef.current += 1;
+    const job = saveChainRef.current.then(() =>
+      fetch(GOOGLE_SHEET_API_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    );
+    saveChainRef.current = job.catch(() => {});
+    return job.finally(() => {
+      pendingSavesRef.current -= 1;
+      lastSaveEndRef.current = Date.now();
+    });
+  };
 
-    const updated = {
-      ...ratings,
-      [activeUser]: {
-        ...(ratings[activeUser] || {}),
-        [tower]: score,
-      },
-    };
-    setRatings(updated);
-    localStorage.setItem('atc_tower_rankings_gsheet', JSON.stringify(updated));
-
-    if (
-      GOOGLE_SHEET_API_URL &&
-      !GOOGLE_SHEET_API_URL.includes('YOUR_GOOGLE_APPS_SCRIPT')
-    ) {
-      setSyncStatus('Saving...');
-      try {
-        await fetch(GOOGLE_SHEET_API_URL, {
-          method: 'POST',
-          body: JSON.stringify({ controller: activeUser, tower, score }),
-        });
-        setSyncStatus('Synced');
-        setSaveToast({ visible: true, user: activeUser, isSuccess: true });
-      } catch (err) {
-        setSyncStatus('Save Error');
-        setSaveToast({ visible: true, user: activeUser, isSuccess: true });
-      } finally {
-        isSavingRef.current = false;
-        setTimeout(
-          () => setSaveToast((prev) => ({ ...prev, visible: false })),
-          2000,
-        );
-      }
-    } else {
-      isSavingRef.current = false;
-      setSaveToast({ visible: true, user: activeUser, isSuccess: true });
-      setTimeout(
+  const showToast = (user, isSuccess, hideAfter) => {
+    clearTimeout(toastTimerRef.current);
+    setSaveToast({ visible: true, user, isSuccess });
+    if (hideAfter) {
+      toastTimerRef.current = setTimeout(
         () => setSaveToast((prev) => ({ ...prev, visible: false })),
-        1500,
+        hideAfter,
       );
     }
   };
 
-  const confirmResetUserRatings = async () => {
-    setShowResetModal(false);
-    isSavingRef.current = true;
+  const handleRatingChange = async (tower, score) => {
     const activeUser = currentUser;
+    const prev = ratingsRef.current;
+    if (prev[activeUser]?.[tower] === score) return;
 
-    setSaveToast({ visible: true, user: activeUser, isSuccess: false });
-
+    // Always build on the latest ratings so fast clicks never undo each other
     const updated = {
-      ...ratings,
-      [activeUser]: {},
+      ...prev,
+      [activeUser]: { ...(prev[activeUser] || {}), [tower]: score },
     };
-
-    setRatings(updated);
+    applyRatings(updated);
     localStorage.setItem('atc_tower_rankings_gsheet', JSON.stringify(updated));
 
-    if (
-      GOOGLE_SHEET_API_URL &&
-      !GOOGLE_SHEET_API_URL.includes('YOUR_GOOGLE_APPS_SCRIPT')
-    ) {
-      setSyncStatus('Resetting...');
-      try {
-        for (let tower of ALL_TOWERS) {
-          await fetch(GOOGLE_SHEET_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-              controller: activeUser,
-              tower,
-              score: DEFAULT_SCORE,
-            }),
-          });
-        }
-        setSyncStatus('Synced');
-        setSaveToast({ visible: true, user: activeUser, isSuccess: true });
-      } catch (err) {
-        setSyncStatus('Reset Locally');
-      } finally {
-        isSavingRef.current = false;
-        setTimeout(
-          () => setSaveToast((prev) => ({ ...prev, visible: false })),
-          2000,
-        );
-      }
-    } else {
-      isSavingRef.current = false;
-      setTimeout(
-        () => setSaveToast((prev) => ({ ...prev, visible: false })),
-        1500,
-      );
+    if (!cloudEnabled()) {
+      showToast(activeUser, true, 1500);
+      return;
     }
+
+    showToast(activeUser, false);
+    setSyncStatus('Saving...');
+    try {
+      await queueSave({ controller: activeUser, tower, score });
+      if (pendingSavesRef.current === 0) setSyncStatus('Synced');
+    } catch (err) {
+      setSyncStatus('Save Error');
+    }
+    // Only the last save in a burst updates the toast
+    if (pendingSavesRef.current === 0) showToast(activeUser, true, 2000);
+  };
+
+  const confirmResetUserRatings = async () => {
+    setShowResetModal(false);
+    const activeUser = currentUser;
+
+    const updated = { ...ratingsRef.current, [activeUser]: {} };
+    applyRatings(updated);
+    localStorage.setItem('atc_tower_rankings_gsheet', JSON.stringify(updated));
+
+    if (!cloudEnabled()) {
+      showToast(activeUser, true, 1500);
+      return;
+    }
+
+    showToast(activeUser, false);
+    setSyncStatus('Resetting...');
+    try {
+      await Promise.all(
+        ALL_TOWERS.map((tower) =>
+          queueSave({
+            controller: activeUser,
+            tower,
+            score: UNRATED_SCORE,
+          }),
+        ),
+      );
+      if (pendingSavesRef.current === 0) setSyncStatus('Synced');
+    } catch (err) {
+      setSyncStatus('Reset Locally');
+    }
+    if (pendingSavesRef.current === 0) showToast(activeUser, true, 2000);
+  };
+
+  // Save many ratings at once (used by the Help Me Decide helper)
+  const handleBulkRatings = async (map) => {
+    const activeUser = currentUser;
+    const prev = ratingsRef.current;
+    const updated = {
+      ...prev,
+      [activeUser]: { ...(prev[activeUser] || {}), ...map },
+    };
+    applyRatings(updated);
+    localStorage.setItem('atc_tower_rankings_gsheet', JSON.stringify(updated));
+
+    if (!cloudEnabled()) {
+      showToast(activeUser, true, 1500);
+      return;
+    }
+
+    showToast(activeUser, false);
+    setSyncStatus('Saving...');
+    try {
+      await Promise.all(
+        Object.entries(map).map(([tower, score]) =>
+          queueSave({ controller: activeUser, tower, score }),
+        ),
+      );
+      if (pendingSavesRef.current === 0) setSyncStatus('Synced');
+    } catch (err) {
+      setSyncStatus('Save Error');
+    }
+    if (pendingSavesRef.current === 0) showToast(activeUser, true, 2000);
   };
 
   const getRatedCount = (user) => {
@@ -387,40 +1379,30 @@ function App() {
     return Object.values(userRatings).filter((score) => score > 0).length;
   };
 
+  // Unrated towers count as DEFAULT_SCORE (3)
   const getScore = (user, tower) => {
-    return ratings[user]?.[tower] !== undefined
-      ? ratings[user][tower]
-      : DEFAULT_SCORE;
+    const s = ratings[user]?.[tower];
+    return s > 0 ? s : DEFAULT_SCORE;
   };
 
-  // Metrics calculation
+  // Metrics calculation. Unrated towers count as 3 for everyone.
   const towerMetrics = ALL_TOWERS.map((tower) => {
-    let total = 0;
     let explicitCount = 0;
-    let scores = [];
-    let highScorers = [];
+    const scores = [];
+    const highScorers = [];
 
     users.forEach((u) => {
       const s = ratings[u]?.[tower];
-      if (s !== undefined && s > 0) {
-        total += s;
+      if (s > 0) {
         explicitCount++;
-        scores.push(s);
         if (s >= 4) highScorers.push(u);
-      } else {
-        total += DEFAULT_SCORE;
-        scores.push(DEFAULT_SCORE);
       }
+      scores.push(s > 0 ? s : DEFAULT_SCORE);
     });
-    // Unrated (0) scores are left out: averages and variance only use real ratings
-    const ratedScores = scores.filter((v) => v > 0);
-    const avg = explicitCount > 0 ? total / explicitCount : 0;
-    let variance = 0;
-    if (ratedScores.length > 1) {
-      variance =
-        ratedScores.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) /
-        ratedScores.length;
-    }
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const variance =
+      scores.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) /
+      scores.length;
 
     const meta = TOWER_METADATA[tower];
 
@@ -466,7 +1448,7 @@ function App() {
       }
       const valueOf = (m) => {
         if (key === 'avg') return m.ratingsCount > 0 ? m.rawAvg : null;
-        return m.scoresMap[key] > 0 ? m.scoresMap[key] : null;
+        return ratings[key]?.[m.tower] > 0 ? ratings[key][m.tower] : null;
       };
       const va = valueOf(a);
       const vb = valueOf(b);
@@ -499,23 +1481,88 @@ function App() {
   const matrixSortIcon = (key) =>
     matrixSort.key === key ? (matrixSort.dir === 'asc' ? '▲' : '▼') : '↕';
 
-  // Compute Category & State Aggregates
+  // Summary for a group of towers (a tower type or a state)
+  const nearlyEqual = (a, b) => Math.abs(a - b) < 1e-9;
+  const joinNames = (names) =>
+    names.length === users.length ? 'All tied' : names.join(', ');
+
+  const groupSummary = (items) => {
+    const anyRated = items.some((m) => m.ratingsCount > 0);
+    const sorted = [...items].sort(
+      (a, b) =>
+        b.rawAvg - a.rawAvg ||
+        b.ratingsCount - a.ratingsCount ||
+        a.tower.localeCompare(b.tower),
+    );
+    const avg = items.length
+      ? items.reduce((sum, m) => sum + m.rawAvg, 0) / items.length
+      : 0;
+
+    let topController = 'N/A';
+    let lowestController = 'N/A';
+    if (anyRated && items.length > 0) {
+      const perUser = users.map((u) => ({
+        user: u,
+        avg:
+          items.reduce((sum, m) => sum + getScore(u, m.tower), 0) /
+          items.length,
+      }));
+      const hi = Math.max(...perUser.map((p) => p.avg));
+      const lo = Math.min(...perUser.map((p) => p.avg));
+      topController = joinNames(
+        perUser.filter((p) => nearlyEqual(p.avg, hi)).map((p) => p.user),
+      );
+      lowestController = joinNames(
+        perUser.filter((p) => nearlyEqual(p.avg, lo)).map((p) => p.user),
+      );
+    }
+
+    return {
+      avg,
+      topTower: anyRated ? sorted[0].tower : 'N/A',
+      bottomPick:
+        anyRated && items.length > 1 ? sorted[sorted.length - 1].tower : 'N/A',
+      topController,
+      lowestController,
+    };
+  };
+
+  const groupRows = (g) => {
+    const rows = [
+      {
+        label: g.count === 1 ? 'Tower' : 'Top Pick',
+        value: g.topTower,
+        tone: 'text-emerald-400',
+      },
+    ];
+    if (g.count > 1) {
+      rows.push({
+        label: 'Bottom Pick',
+        value: g.bottomPick,
+        tone: 'text-rose-400',
+      });
+    }
+    rows.push(
+      { label: 'Top Rated', value: g.topController, tone: 'text-sky-300' },
+      {
+        label: 'Bottom Rated',
+        value: g.lowestController,
+        tone: 'text-orange-300',
+      },
+    );
+    return rows;
+  };
+
   const categoriesList = ['Radar', 'Regional', 'Metro D'];
   const categoryStats = categoriesList
     .map((cat) => {
       const items = towerMetrics.filter((m) => m.category === cat);
-      const ratedItems = items.filter((m) => m.ratingsCount > 0);
-      const totalAvg =
-        ratedItems.reduce((sum, item) => sum + item.rawAvg, 0) /
-        (ratedItems.length || 1);
-      const topTower = [...ratedItems].sort(
-        (a, b) => b.rawAvg - a.rawAvg || b.ratingsCount - a.ratingsCount,
-      )[0];
+      const g = groupSummary(items);
       return {
+        ...g,
         category: cat,
         count: items.length,
-        avg: totalAvg.toFixed(2),
-        topTower: topTower ? topTower.tower : 'N/A',
+        avg: g.avg.toFixed(2),
       };
     })
     .sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg));
@@ -524,40 +1571,236 @@ function App() {
   const stateStats = statesList
     .map((st) => {
       const items = towerMetrics.filter((m) => m.state === st);
-      const ratedItems = items.filter((m) => m.ratingsCount > 0);
-      const totalAvg =
-        ratedItems.length > 0
-          ? ratedItems.reduce((sum, item) => sum + item.rawAvg, 0) /
-            ratedItems.length
-          : 0;
-      const topTower =
-        ratedItems.length > 0
-          ? [...ratedItems].sort(
-              (a, b) => b.rawAvg - a.rawAvg || b.ratingsCount - a.ratingsCount,
-            )[0]
-          : null;
-      return {
-        state: st,
-        count: items.length,
-        avg: totalAvg.toFixed(2),
-        topTower: topTower ? topTower.tower : 'N/A',
-      };
+      const g = groupSummary(items);
+      return { ...g, state: st, count: items.length, avg: g.avg.toFixed(2) };
     })
     .sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg));
 
-  // Trivia Insights Derivation
-  const ratedTowers = towerMetrics.filter((m) => m.ratingsCount > 0);
-  const mostPolarised = towerMetrics
-    .filter((m) => m.ratingsCount >= 2)
-    .sort(
-      (a, b) => b.variance - a.variance || b.ratingsCount - a.ratingsCount,
-    )[0];
+  // ---- Trivia ----
+  // Controller cards need a few ratings first; unrated towers count as 3.
+  const MIN_RATED = 5;
+  const eligibleUsers = users.filter((u) => getRatedCount(u) >= MIN_RATED);
+  const needRatings = `Needs ${MIN_RATED}+ ratings each`;
+  const meanOf = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const spreadOf = (arr) => {
+    const m = meanOf(arr);
+    return meanOf(arr.map((v) => (v - m) * (v - m)));
+  };
+  const scoresOf = (u) => ALL_TOWERS.map((t) => getScore(u, t));
+
+  // Best (or worst) controller(s) by a value. Ties are all returned.
+  const rankUsers = (valueOf, mode) => {
+    if (eligibleUsers.length === 0) return null;
+    const vals = eligibleUsers.map((u) => ({ user: u, value: valueOf(u) }));
+    const target = Math[mode](...vals.map((v) => v.value));
+    const winners = vals.filter((v) => nearlyEqual(v.value, target));
+    return { name: winners.map((v) => v.user).join(', '), value: target };
+  };
+
+  // Best (or worst) pair of controllers by average gap
+  const rankPairs = (mode) => {
+    let best = null;
+    for (let i = 0; i < eligibleUsers.length; i++) {
+      for (let j = i + 1; j < eligibleUsers.length; j++) {
+        const a = scoresOf(eligibleUsers[i]);
+        const b = scoresOf(eligibleUsers[j]);
+        const gap = meanOf(a.map((v, k) => Math.abs(v - b[k])));
+        const same = a.filter((v, k) => v === b[k]).length;
+        const better =
+          !best || (mode === 'min' ? gap < best.gap : gap > best.gap);
+        if (better) {
+          best = {
+            name: `${eligibleUsers[i]} & ${eligibleUsers[j]}`,
+            gap,
+            same,
+          };
+        }
+      }
+    }
+    return best;
+  };
+
+  const towerBadges = (m) =>
+    m
+      ? [
+          <CategoryBadge key='c' category={m.category} />,
+          <StateBadge key='s' state={m.state} />,
+        ]
+      : null;
+
+  const polarisedPool = towerMetrics.filter((m) => m.ratingsCount >= 2);
+  const mostDivisive = [...polarisedPool].sort(
+    (a, b) => b.variance - a.variance || b.ratingsCount - a.ratingsCount,
+  )[0];
+  const mostAgreed = [...polarisedPool].sort(
+    (a, b) =>
+      a.variance - b.variance ||
+      b.rawAvg - a.rawAvg ||
+      b.ratingsCount - a.ratingsCount,
+  )[0];
+  const fiveStarCount = towerMetrics.filter((m) =>
+    Object.values(m.scoresMap).includes(5),
+  ).length;
+  const oneStarCount = towerMetrics.filter((m) =>
+    Object.values(m.scoresMap).includes(1),
+  ).length;
+  const pct = (n) => `${Math.round((n / ALL_TOWERS.length) * 100)}%`;
+
+  const generous = rankUsers((u) => meanOf(scoresOf(u)), 'max');
+  const critic = rankUsers((u) => meanOf(scoresOf(u)), 'min');
+  const consistent = rankUsers((u) => spreadOf(scoresOf(u)), 'min');
+  const extreme = rankUsers((u) => spreadOf(scoresOf(u)), 'max');
+  const groupDistance = (u) =>
+    meanOf(towerMetrics.map((m) => Math.abs(getScore(u, m.tower) - m.rawAvg)));
+  const groupMind = rankUsers(groupDistance, 'min');
+  const loneWolf = rankUsers(groupDistance, 'max');
+  const twins = rankPairs('min');
+  const opposites = rankPairs('max');
+
+  const triviaSections = [
+    {
+      title: 'Towers',
+      cards: [
+        {
+          icon: '⚡',
+          tint: 'amber',
+          title: 'Pineapple on Pizza',
+          subtitle: 'The tower everyone argues about',
+          name: mostDivisive ? mostDivisive.tower : 'N/A',
+          badges: towerBadges(mostDivisive),
+          detail: mostDivisive ? null : 'Needs 2+ ratings',
+          label: 'Split',
+          value: mostDivisive ? mostDivisive.variance.toFixed(2) : '0.00',
+        },
+        {
+          icon: '🤝',
+          tint: 'cyan',
+          title: 'Group Hug',
+          subtitle: 'The tower everyone agrees on',
+          name: mostAgreed ? mostAgreed.tower : 'N/A',
+          badges: towerBadges(mostAgreed),
+          detail: mostAgreed ? null : 'Needs 2+ ratings',
+          label: 'Split',
+          value: mostAgreed ? mostAgreed.variance.toFixed(2) : '0.00',
+        },
+        {
+          icon: '⭐',
+          tint: 'yellow',
+          title: 'Golden Tickets',
+          subtitle: 'Towers someone gave a 5',
+          name: `${fiveStarCount} of ${ALL_TOWERS.length} towers`,
+          label: 'Share',
+          value: pct(fiveStarCount),
+        },
+        {
+          icon: '🚫',
+          tint: 'rose',
+          title: 'Wall of Shame',
+          subtitle: 'Towers someone gave a 1',
+          name: `${oneStarCount} of ${ALL_TOWERS.length} towers`,
+          label: 'Share',
+          value: pct(oneStarCount),
+        },
+      ],
+    },
+    {
+      title: 'Controllers',
+      cards: [
+        {
+          icon: '🌟',
+          tint: 'sky',
+          title: 'Santa Claus',
+          subtitle: 'Gives the highest ratings',
+          name: generous ? generous.name : 'N/A',
+          detail: generous ? null : needRatings,
+          label: 'Avg',
+          value: generous ? generous.value.toFixed(2) : '0.00',
+        },
+        {
+          icon: '🎯',
+          tint: 'orange',
+          title: 'Scrooge',
+          subtitle: 'Gives the lowest ratings',
+          name: critic ? critic.name : 'N/A',
+          detail: critic ? null : needRatings,
+          label: 'Avg',
+          value: critic ? critic.value.toFixed(2) : '0.00',
+        },
+        {
+          icon: '🪵',
+          tint: 'violet',
+          title: 'Fence Sitter',
+          subtitle: 'Rates everything about the same',
+          name: consistent ? consistent.name : 'N/A',
+          detail: consistent ? null : needRatings,
+          label: 'Spread',
+          value: consistent ? consistent.value.toFixed(2) : '0.00',
+        },
+        {
+          icon: '🔥',
+          tint: 'red',
+          title: 'Rollercoaster',
+          subtitle: 'Loves it or hates it',
+          name: extreme ? extreme.name : 'N/A',
+          detail: extreme ? null : needRatings,
+          label: 'Spread',
+          value: extreme ? extreme.value.toFixed(2) : '0.00',
+        },
+      ],
+    },
+    {
+      title: 'Pairs & Group',
+      cards: [
+        {
+          icon: '👯',
+          tint: 'teal',
+          title: 'Separated at Birth',
+          subtitle: 'Two controllers who rate alike',
+          name: twins ? twins.name : 'N/A',
+          detail: twins
+            ? `${twins.same} of ${ALL_TOWERS.length} match`
+            : needRatings,
+          label: 'Gap',
+          value: twins ? twins.gap.toFixed(2) : '0.00',
+        },
+        {
+          icon: '☯️',
+          tint: 'purple',
+          title: 'Oil & Water',
+          subtitle: 'Two controllers who rate opposite',
+          name: opposites ? opposites.name : 'N/A',
+          detail: opposites
+            ? `${opposites.same} of ${ALL_TOWERS.length} match`
+            : needRatings,
+          label: 'Gap',
+          value: opposites ? opposites.gap.toFixed(2) : '0.00',
+        },
+        {
+          icon: '🐝',
+          tint: 'indigo',
+          title: 'Hive Mind',
+          subtitle: 'Rates closest to the group',
+          name: groupMind ? groupMind.name : 'N/A',
+          detail: groupMind ? null : needRatings,
+          label: 'Gap',
+          value: groupMind ? groupMind.value.toFixed(2) : '0.00',
+        },
+        {
+          icon: '🐺',
+          tint: 'pink',
+          title: 'Lone Wolf',
+          subtitle: 'Rates furthest from the group',
+          name: loneWolf ? loneWolf.name : 'N/A',
+          detail: loneWolf ? null : needRatings,
+          label: 'Gap',
+          value: loneWolf ? loneWolf.value.toFixed(2) : '0.00',
+        },
+      ],
+    },
+  ];
 
   // Optimal Draft Permutation Engine with Frequency-Validated Locks
   const runOptimalDraft = () => {
-    const lockClick = lockFlashPendingRef.current;
-    const lockTriggered = lockClick !== null;
-    lockFlashPendingRef.current = null;
     const slots = targetSlots || [];
     if (slots.length === 0) return;
 
@@ -665,7 +1908,18 @@ function App() {
       return assignments;
     });
 
-    const nextOptions = formattedOptions.length > 0 ? formattedOptions : [{}];
+    // Options that give every controller the same towers look identical, so keep one
+    const seenOptions = new Set();
+    const uniqueOptions = [];
+    formattedOptions.forEach((opt) => {
+      const sig = users.map((u) => opt[u]?.tower).join('|');
+      if (!seenOptions.has(sig)) {
+        seenOptions.add(sig);
+        uniqueOptions.push(opt);
+      }
+    });
+
+    const nextOptions = uniqueOptions.length > 0 ? uniqueOptions : [{}];
     const draftKey = JSON.stringify([bestGlobalScore, nextOptions]);
     if (draftKey === lastDraftKeyRef.current) return;
     lastDraftKeyRef.current = draftKey;
@@ -677,20 +1931,20 @@ function App() {
     });
     setSelectedOptionIdx(0);
 
-    // After a lock/unlock, flash whichever controllers' towers changed
+    // Flash the placement cards whose tower changed (any redraft, not just locks)
     const changed = {};
-    if (lockTriggered) {
-      const prevOption = draftResult?.options?.[selectedOptionIdx] || {};
+    if (draftResult) {
+      const prevOption = draftResult.options?.[selectedOptionIdx] || {};
       const nextOption = nextOptions[0] || {};
+      const click = clickedRowRef.current;
+      const recentClick = click && Date.now() < click.until;
       users.forEach((u) => {
         const from = prevOption[u]?.tower;
         const to = nextOption[u]?.tower;
         if (from && to && from !== to) {
           changed[u] = { from, to };
-          // In the form being clicked, don't flash the clicked tower itself
-          if (u === lockClick.user) {
-            changed[u].skipTower = lockClick.tower;
-            changed[u].skipCard = lockClick.fromCard;
+          if (recentClick && u === click.user) {
+            changed[u].skipCard = click.fromCard;
           }
         }
       });
@@ -707,6 +1961,81 @@ function App() {
   useEffect(() => {
     runOptimalDraft();
   }, [targetSlots, ratings, manualLocks]);
+
+  // The ordered tower list shown in each controller's form guide
+  const buildFormItems = (u) => {
+    const uniqueTargetTowers = [...new Set(targetSlots || [])];
+    const currentLock = manualLocks[u];
+    const assignedTowerName =
+      draftResult?.options?.[selectedOptionIdx]?.[u]?.tower;
+
+    // #1 is the calculated placement (or the manual lock if set)
+    const topTowerName = currentLock || assignedTowerName;
+
+    const otherTowers = uniqueTargetTowers
+      .filter((t) => t !== topTowerName)
+      .map((tower) => ({
+        tower,
+        score: getScore(u, tower),
+        meta: TOWER_METADATA[tower] || { state: 'VIC' },
+      }))
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.tower.localeCompare(b.tower);
+      });
+
+    return [
+      {
+        tower: topTowerName,
+        score: getScore(u, topTowerName),
+        isAssigned: topTowerName === assignedTowerName,
+        meta: TOWER_METADATA[topTowerName] || { state: 'VIC' },
+      },
+      ...otherTowers.map((item) => ({
+        ...item,
+        isAssigned: item.tower === assignedTowerName,
+      })),
+    ];
+  };
+
+  // Flash (yellow) any form row that changes position, whatever caused it:
+  // locking, clearing locks, tied options, new ratings or a new target list.
+  const formOrders = draftResult
+    ? users.reduce(
+        (acc, u) => ({ ...acc, [u]: buildFormItems(u).map((i) => i.tower) }),
+        {},
+      )
+    : null;
+  const formOrdersKey = JSON.stringify(formOrders);
+
+  useEffect(() => {
+    if (!formOrders) return;
+    const prev = prevFormOrdersRef.current;
+    prevFormOrdersRef.current = formOrders;
+    if (!prev) return;
+
+    const click = clickedRowRef.current;
+    const recentClick = click && Date.now() < click.until;
+    const rows = {};
+    let any = false;
+    users.forEach((u) => {
+      const before = prev[u] || [];
+      (formOrders[u] || []).forEach((tower, i) => {
+        const was = before.indexOf(tower);
+        if (was === -1 || was === i) return;
+        // The row that was just clicked doesn't flash
+        if (recentClick && click.user === u && click.tower === tower) return;
+        rows[u] = (rows[u] || []).concat(tower);
+        any = true;
+      });
+    });
+
+    clearTimeout(rowFlashTimerRef.current);
+    if (any) {
+      setRowFlash((p) => ({ id: (p?.id || 0) + 1, rows }));
+      rowFlashTimerRef.current = setTimeout(() => setRowFlash(null), 2200);
+    }
+  }, [formOrdersKey]);
 
   const getHeatmapClass = (score) => {
     if (score === 5)
@@ -832,7 +2161,7 @@ function App() {
                 key={u}
                 onClick={() => setCurrentUser(u)}
                 aria-pressed={isActive}
-                aria-label={`Select ${u}. Progress: ${ratedCount} of 31 towers rated.`}
+                aria-label={`Select ${u}. Progress: ${ratedCount} of ${ALL_TOWERS.length} towers rated.`}
                 className={`p-3.5 rounded-2xl border text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 cursor-pointer ${
                   isActive
                     ? 'border-sky-500/80 bg-sky-950/60 shadow-lg shadow-sky-950/50 ring-1 ring-sky-500/40'
@@ -848,7 +2177,7 @@ function App() {
                   <span
                     className={`text-[11px] px-2 py-0.5 rounded-md font-mono font-bold ${isComplete ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-300 border border-slate-700/60'}`}
                   >
-                    {ratedCount}/31
+                    {ratedCount}/{ALL_TOWERS.length}
                   </span>
                 </div>
                 <div className='w-full bg-slate-800/80 h-1.5 rounded-full overflow-hidden shadow-inner'>
@@ -1010,12 +2339,20 @@ function App() {
                   Score every tower from 1 (Lowest) to 5 (Highest).
                 </p>
               </div>
-              <button
-                onClick={() => setShowResetModal(true)}
-                className='px-4 py-2.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 self-start sm:self-auto cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 shadow-md'
-              >
-                ↺ Reset {currentUser}'s Ratings
-              </button>
+              <div className='flex flex-wrap items-center gap-2 self-start sm:self-auto'>
+                <button
+                  onClick={() => setShowHelper(true)}
+                  className='px-4 py-2.5 bg-sky-950/70 hover:bg-sky-900 border border-sky-700/80 text-sky-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 shadow-md'
+                >
+                  🧭 Help Me Decide
+                </button>
+                <button
+                  onClick={() => setShowResetModal(true)}
+                  className='px-4 py-2.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 shadow-md'
+                >
+                  ↺ Reset {currentUser}'s Ratings
+                </button>
+              </div>
             </div>
 
             {/* TOWER RATING CARDS GRID */}
@@ -1062,28 +2399,17 @@ function App() {
                   const score = ratings[currentUser]?.[tower];
                   const isRated = score !== undefined && score > 0;
                   return (
-                    <div
+                    <PlainCard
                       key={tower}
-                      className='bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition duration-200 shadow-inner'
+                      title={tower}
+                      bodyClassName='px-4 pb-4 pt-2 space-y-4'
                     >
-                      <div className='flex justify-between items-start mb-4'>
-                        <div>
-                          <span className='font-bold text-base text-slate-100'>
-                            {tower}
-                          </span>
-                          <div className='flex items-center gap-2.5 mt-1.5'>
-                            <CategoryBadge category={meta.category} />
-                            <StateBadge state={meta.state} />
-                          </div>
-                        </div>
-                        {!isRated && (
-                          <span className='text-[10px] font-semibold bg-slate-900 text-slate-400 px-2.5 py-1 rounded-lg border border-slate-800'>
-                            Unrated (0)
-                          </span>
-                        )}
+                      <div className='flex items-center gap-2.5'>
+                        <CategoryBadge category={meta.category} />
+                        <StateBadge state={meta.state} />
                       </div>
                       <div
-                        className='flex items-center justify-between gap-1.5 mt-2'
+                        className='flex items-center justify-between gap-1.5'
                         role='group'
                         aria-label={`Rate ${tower}`}
                       >
@@ -1103,7 +2429,7 @@ function App() {
                           </button>
                         ))}
                       </div>
-                    </div>
+                    </PlainCard>
                   );
                 });
               })()}
@@ -1144,7 +2470,7 @@ function App() {
                   onClick={handleRandomiseSlots}
                   className='px-4 py-2.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-md'
                 >
-                  🎲 Randomise 6 Towers
+                  🎲 Randomise
                 </button>
               </div>
             </div>
@@ -1154,22 +2480,20 @@ function App() {
               {targetSlots.map((slotVal, sIdx) => {
                 const meta = TOWER_METADATA[slotVal];
                 return (
-                  <div
+                  <PlainCard
                     key={sIdx}
-                    className='bg-slate-950/80 p-4 rounded-2xl border border-slate-800/80 shadow-inner'
-                  >
-                    <div className='flex justify-between items-center mb-2'>
-                      <label
-                        htmlFor={`slot-${sIdx}`}
-                        className='text-xs font-bold text-slate-300'
-                      >
+                    title={
+                      <label htmlFor={`slot-${sIdx}`}>
                         Target Slot #{sIdx + 1}
                       </label>
-                      <div className='flex items-center gap-2'>
+                    }
+                    aside={
+                      <>
                         <CategoryBadge category={meta.category} />
                         <StateBadge state={meta.state} />
-                      </div>
-                    </div>
+                      </>
+                    }
+                  >
                     <select
                       id={`slot-${sIdx}`}
                       value={slotVal}
@@ -1210,7 +2534,7 @@ function App() {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </PlainCard>
                 );
               })}
             </div>
@@ -1253,16 +2577,21 @@ function App() {
                   )}
                 </div>
 
-                {/* Clear Locks Button Area (Inline when no tied options, wraps/aligns when tied options are present) */}
-                <div
-                  className={`flex items-center min-h-[36px] shrink-0 w-full sm:w-auto justify-end ${Object.keys(manualLocks).length > 0 ? '' : 'invisible'}`}
-                >
+                {/* Clear Locks + Randomise (pinned for easy access) */}
+                <div className='flex items-center gap-2 min-h-[36px] shrink-0 w-full sm:w-auto justify-end'>
+                  {Object.keys(manualLocks).length > 0 && (
+                    <button
+                      onClick={() => setManualLocks({})}
+                      className='px-3.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md whitespace-nowrap'
+                    >
+                      Clear Locks ({Object.keys(manualLocks).length})
+                    </button>
+                  )}
                   <button
-                    onClick={() => setManualLocks({})}
-                    disabled={Object.keys(manualLocks).length === 0}
-                    className='px-3.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-700/80 text-rose-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md whitespace-nowrap'
+                    onClick={handleRandomiseSlots}
+                    className='px-3.5 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400'
                   >
-                    Clear Locks ({Object.keys(manualLocks).length})
+                    🎲 Randomise
                   </button>
                 </div>
               </div>
@@ -1309,12 +2638,13 @@ function App() {
                     const isLocked = manualLocks[u] === assignment.tower;
                     const flashInfo = tieFlash?.users?.[u];
                     return (
-                      <div
+                      <PlainCard
                         key={u}
+                        tone={isLocked ? 'success' : 'default'}
                         role='button'
                         tabIndex={0}
                         aria-pressed={isLocked}
-                        title={`Click to ${isLocked ? 'unlock' : 'lock'} ${assignment.tower} for ${u}`}
+                        tooltip={`Click to ${isLocked ? 'unlock' : 'lock'} ${assignment.tower} for ${u}`}
                         onClick={() =>
                           assignment.tower &&
                           toggleLock(u, assignment.tower, true)
@@ -1326,47 +2656,38 @@ function App() {
                               toggleLock(u, assignment.tower, true);
                           }
                         }}
-                        className={`relative p-5 rounded-2xl flex justify-between items-center shadow-inner border transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-                          isLocked
-                            ? 'bg-emerald-950/40 border-emerald-500/80 ring-1 ring-emerald-500/40'
-                            : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-600'
-                        } ${flashInfo && !flashInfo.skipCard ? `tie-flash-${tieFlash.id % 2}` : ''}`}
+                        flashClass={
+                          flashInfo && !flashInfo.skipCard
+                            ? `tie-flash-${tieFlash.id % 2}`
+                            : ''
+                        }
+                        className='cursor-pointer hover:border-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400'
+                        lead={<IconBox>{isLocked ? '🔒' : '🎯'}</IconBox>}
+                        title={u}
+                        aside={
+                          <>
+                            {flashInfo && !flashInfo.skipCard && (
+                              <span className='text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-950 border border-amber-500/70 text-amber-300'>
+                                was {flashInfo.from}
+                              </span>
+                            )}
+                            <span className='font-mono font-extrabold text-emerald-400 text-sm'>
+                              {assignment.score} / 5
+                            </span>
+                          </>
+                        }
+                        bodyClassName='px-4 pb-4 pt-2'
                       >
-                        {flashInfo && !flashInfo.skipCard && (
-                          <span className='absolute -top-2.5 right-4 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-950 border border-amber-500/70 text-amber-300 shadow-md'>
-                            was {flashInfo.from}
-                          </span>
-                        )}
-                        <div>
-                          <span className='text-xs text-slate-400 block font-semibold'>
-                            Controller
-                          </span>
-                          <span className='font-bold text-slate-100 text-lg'>
-                            {u}
-                          </span>
-                        </div>
-                        <div
-                          className={`text-center px-3.5 py-2 rounded-xl border ${isLocked ? 'bg-emerald-950/60 border-emerald-700/60' : 'bg-slate-900 border-slate-800'}`}
-                        >
-                          <div className='flex items-center justify-center gap-2 mb-1'>
-                            <CategoryBadge category={meta.category} />
-                            <StateBadge state={meta.state} />
-                          </div>
+                        <div className='flex flex-wrap items-center gap-x-2.5 gap-y-1.5'>
                           <span
-                            className={`font-bold ${isLocked ? 'text-emerald-300' : 'text-sky-300'}`}
+                            className={`font-extrabold text-lg break-words ${isLocked ? 'text-emerald-300' : 'text-sky-300'}`}
                           >
                             {assignment.tower}
                           </span>
+                          <CategoryBadge category={meta.category} />
+                          <StateBadge state={meta.state} />
                         </div>
-                        <div className='text-right'>
-                          <span className='text-xs text-slate-400 block font-semibold'>
-                            Rating
-                          </span>
-                          <span className='font-extrabold text-emerald-400 text-lg'>
-                            {assignment.score} / 5
-                          </span>
-                        </div>
-                      </div>
+                      </PlainCard>
                     );
                   })}
                 </div>
@@ -1384,69 +2705,27 @@ function App() {
 
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
                   {users.map((u) => {
-                    const uniqueTargetTowers = [...new Set(targetSlots || [])];
                     const currentLock = manualLocks[u];
-                    const assignedTowerName =
-                      draftResult.options[selectedOptionIdx]?.[u]?.tower;
-
-                    // 1. #1 is EXACTLY what was calculated in the optimal placement result (or manual lock if set)
-                    const topTowerName = currentLock || assignedTowerName;
-
-                    // 2. Gather all other target towers, sorted by personal score descending
-                    const otherTowers = uniqueTargetTowers
-                      .filter((t) => t !== topTowerName)
-                      .map((tower) => ({
-                        tower,
-                        score: getScore(u, tower),
-                        meta: TOWER_METADATA[tower] || { state: 'VIC' },
-                      }))
-                      .sort((a, b) => {
-                        if (b.score !== a.score) return b.score - a.score;
-                        return a.tower.localeCompare(b.tower);
-                      });
-
-                    // 3. Combine: #1 is at the top, followed by the rest cleanly without duplicates
-                    let items = [
-                      {
-                        tower: topTowerName,
-                        score: getScore(u, topTowerName),
-                        isAssigned: topTowerName === assignedTowerName,
-                        meta: TOWER_METADATA[topTowerName] || { state: 'VIC' },
-                      },
-                      ...otherTowers.map((item) => ({
-                        ...item,
-                        isAssigned: item.tower === assignedTowerName,
-                      })),
-                    ];
+                    const items = buildFormItems(u);
 
                     return (
-                      <div
+                      <PlainCard
                         key={u}
-                        className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl space-y-2.5 shadow-inner'
+                        title={u}
+                        bodyClassName='px-4 pb-4 pt-3'
                       >
-                        <div>
-                          <span className='text-xs text-slate-400 block font-semibold'>
-                            Controller
-                          </span>
-                          <span className='font-bold text-slate-100 text-lg'>
-                            {u}
-                          </span>
-                        </div>
-                        <ol className='space-y-2 pt-1'>
+                        <ol className='space-y-2'>
                           {items.map((item, rIdx) => {
                             const isThisLocked = currentLock === item.tower;
-                            const flashInfo = tieFlash?.users?.[u];
-                            const isFlashRow =
-                              flashInfo &&
-                              item.tower !== flashInfo.skipTower &&
-                              (item.tower === flashInfo.to ||
-                                item.tower === flashInfo.from);
+                            const isFlashRow = !!rowFlash?.rows?.[u]?.includes(
+                              item.tower,
+                            );
                             return (
                               <li
-                                key={`${item.tower}-${rIdx}`}
+                                key={item.tower}
                                 onClick={() => toggleLock(u, item.tower)}
                                 title={`Click to lock ${item.tower} as #1 for ${u}`}
-                                className={`flex flex-wrap items-center justify-between gap-y-1.5 text-xs px-3 py-2 rounded-xl border transition cursor-pointer ${isFlashRow ? `tie-flash-${tieFlash.id % 2}` : ''} ${
+                                className={`flex flex-wrap items-center justify-between gap-y-1.5 text-xs px-3 py-2 rounded-xl border transition cursor-pointer ${isFlashRow ? `tie-flash-${rowFlash.id % 2}` : ''} ${
                                   isThisLocked
                                     ? 'bg-emerald-950/50 border-emerald-500/70 text-emerald-200 font-bold shadow-sm ring-1 ring-emerald-500/40'
                                     : rIdx === 0
@@ -1479,7 +2758,7 @@ function App() {
                             );
                           })}
                         </ol>
-                      </div>
+                      </PlainCard>
                     );
                   })}
                 </div>
@@ -1674,718 +2953,27 @@ function App() {
           <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-8'>
             <div>
               <h2 className='text-xl font-bold text-slate-100 mb-1'>
-                💡 Team Rating Trivia & Superlatives
+                💡 Team Trivia
               </h2>
               <p className='text-sm text-slate-400'>
-                Live statistics, structural breakdowns, and controller
-                personalities derived straight from team ratings.
+                Quick facts from everyone's ratings.
               </p>
             </div>
 
-            {/* SECTION 1: TOWER CONSENSUS & DISTRIBUTION */}
-            <div className='space-y-4'>
-              <div className='flex items-center gap-2 border-b border-slate-800/80 pb-2'>
-                <span className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
-                  Tower Consensus & Distribution
-                </span>
-              </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-                {/* Card 1: Most Polarised Tower */}
-                <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                  <div className='flex items-center gap-3'>
-                    <div className='w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                      ⚡
-                    </div>
-                    <div>
-                      <h3 className='font-bold text-slate-100 text-sm'>
-                        Most Polarised
-                      </h3>
-                      <p className='text-[11px] text-slate-400 line-clamp-1'>
-                        Highest score variance
-                      </p>
-                    </div>
-                  </div>
-                  <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                    <div className='min-w-0'>
-                      <span className='font-bold text-sm text-sky-300 block truncate'>
-                        {mostPolarised ? mostPolarised.tower : 'N/A'}
-                      </span>
-                      <div className='flex items-center gap-1 mt-1'>
-                        {mostPolarised && (
-                          <CategoryBadge category={mostPolarised.category} />
-                        )}
-                        {mostPolarised && (
-                          <StateBadge state={mostPolarised.state} />
-                        )}
-                      </div>
-                    </div>
-                    <div className='text-right shrink-0'>
-                      <span className='text-[10px] text-slate-400 block font-semibold'>
-                        Variance
-                      </span>
-                      <span className='font-mono text-amber-400 font-extrabold text-sm'>
-                        {mostPolarised ? mostPolarised.variance : '0.00'}
-                      </span>
-                    </div>
-                  </div>
+            {triviaSections.map((section) => (
+              <div key={section.title} className='space-y-4'>
+                <div className='flex items-center gap-2 border-b border-slate-800/80 pb-2'>
+                  <span className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
+                    {section.title}
+                  </span>
                 </div>
-
-                {/* Card 2: Most Unanimous Tower */}
-                {(() => {
-                  const unanimous = [...towerMetrics]
-                    .filter((m) => m.ratingsCount >= 2)
-                    .sort(
-                      (a, b) =>
-                        a.variance - b.variance ||
-                        b.rawAvg - a.rawAvg ||
-                        b.ratingsCount - a.ratingsCount,
-                    )[0];
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          🤝
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Most Unanimous
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Lowest score variance
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-sky-300 block truncate'>
-                            {unanimous ? unanimous.tower : 'N/A'}
-                          </span>
-                          <div className='flex items-center gap-1 mt-1'>
-                            {unanimous && (
-                              <CategoryBadge category={unanimous.category} />
-                            )}
-                            {unanimous && (
-                              <StateBadge state={unanimous.state} />
-                            )}
-                          </div>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Variance
-                          </span>
-                          <span className='font-mono text-cyan-400 font-extrabold text-sm'>
-                            {unanimous ? unanimous.variance : '0.00'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Card 3: Five-Star Favourites */}
-                {(() => {
-                  const perfectCount = towerMetrics.filter((m) =>
-                    Object.values(m.scoresMap).includes(5),
-                  ).length;
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          ⭐
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Five-Star Favourites
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Towers given a 5/5
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-yellow-300 block truncate'>
-                            {perfectCount} of 31 Towers
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            Top tier status
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Share
-                          </span>
-                          <span className='font-mono text-yellow-400 font-extrabold text-sm'>
-                            {Math.round((perfectCount / 31) * 100)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Card 4: One-Star Rejections */}
-                {(() => {
-                  const lowestCount = towerMetrics.filter((m) =>
-                    Object.values(m.scoresMap).includes(1),
-                  ).length;
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          🚫
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            One-Star Rejections
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Towers given a 1/5
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-rose-300 block truncate'>
-                            {lowestCount} of 31 Towers
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            Bottom tier status
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Share
-                          </span>
-                          <span className='font-mono text-rose-400 font-extrabold text-sm'>
-                            {Math.round((lowestCount / 31) * 100)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+                  {section.cards.map((card) => (
+                    <TriviaCard key={card.title} {...card} />
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* SECTION 2: CONTROLLER PAIRINGS & TEAM DYNAMICS */}
-            <div className='space-y-4'>
-              <div className='flex items-center gap-2 border-b border-slate-800/80 pb-2'>
-                <span className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
-                  Controller Pairings & Group Deviation
-                </span>
-              </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-                {/* Card 5: Rating Twins */}
-                {(() => {
-                  let twins = null;
-                  for (let i = 0; i < users.length; i++) {
-                    for (let j = i + 1; j < users.length; j++) {
-                      let shared = 0;
-                      let exact = 0;
-                      let gapTotal = 0;
-                      ALL_TOWERS.forEach((t) => {
-                        const x = ratings[users[i]]?.[t];
-                        const y = ratings[users[j]]?.[t];
-                        if (x > 0 && y > 0) {
-                          shared++;
-                          gapTotal += Math.abs(x - y);
-                          if (x === y) exact++;
-                        }
-                      });
-                      if (shared < 5) continue;
-                      const gap = gapTotal / shared;
-                      if (
-                        !twins ||
-                        gap < twins.gap ||
-                        (gap === twins.gap && shared > twins.shared)
-                      ) {
-                        twins = {
-                          a: users[i],
-                          b: users[j],
-                          gap,
-                          shared,
-                          exact,
-                        };
-                      }
-                    }
-                  }
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          👯
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Rating Twins
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Closest rating alignment
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-teal-300 block truncate'>
-                            {twins ? `${twins.a} & ${twins.b}` : 'N/A'}
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            {twins
-                              ? `${twins.exact}/${twins.shared} exact`
-                              : 'Requires 5+ shared'}
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Avg Gap
-                          </span>
-                          <span className='font-mono text-teal-400 font-extrabold text-sm'>
-                            {twins ? twins.gap.toFixed(2) : '0.00'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Card 6: Rating Opposites */}
-                {(() => {
-                  let opposites = null;
-                  for (let i = 0; i < users.length; i++) {
-                    for (let j = i + 1; j < users.length; j++) {
-                      let shared = 0;
-                      let exact = 0;
-                      let gapTotal = 0;
-                      ALL_TOWERS.forEach((t) => {
-                        const x = ratings[users[i]]?.[t];
-                        const y = ratings[users[j]]?.[t];
-                        if (x > 0 && y > 0) {
-                          shared++;
-                          gapTotal += Math.abs(x - y);
-                          if (x === y) exact++;
-                        }
-                      });
-                      if (shared < 5) continue;
-                      const gap = gapTotal / shared;
-                      if (
-                        !opposites ||
-                        gap > opposites.gap ||
-                        (gap === opposites.gap && shared > opposites.shared)
-                      ) {
-                        opposites = {
-                          a: users[i],
-                          b: users[j],
-                          gap,
-                          shared,
-                          exact,
-                        };
-                      }
-                    }
-                  }
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          ☯️
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Rating Opposites
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Widest preference gap
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-purple-300 block truncate'>
-                            {opposites
-                              ? `${opposites.a} & ${opposites.b}`
-                              : 'N/A'}
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            {opposites
-                              ? `${opposites.exact}/${opposites.shared} exact`
-                              : 'Requires 5+ shared'}
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Avg Gap
-                          </span>
-                          <span className='font-mono text-purple-400 font-extrabold text-sm'>
-                            {opposites ? opposites.gap.toFixed(2) : '0.00'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Card 7: Hive Mind */}
-                {(() => {
-                  let minDevUser = 'N/A';
-                  let minDevVal = Infinity;
-                  users.forEach((u) => {
-                    let devSum = 0;
-                    let count = 0;
-                    towerMetrics.forEach((m) => {
-                      const s = getScore(u, m.tower);
-                      if (s > 0) {
-                        devSum += Math.abs(s - m.rawAvg);
-                        count++;
-                      }
-                    });
-                    const avgDev = count ? devSum / count : Infinity;
-                    if (avgDev < minDevVal) {
-                      minDevVal = avgDev;
-                      minDevUser = u;
-                    }
-                  });
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          🐝
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Hive Mind
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Lowest team deviation
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-indigo-300 block truncate'>
-                            {minDevVal !== Infinity ? minDevUser : 'N/A'}
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            Closest to consensus
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Avg Dev
-                          </span>
-                          <span className='font-mono text-indigo-400 font-extrabold text-sm'>
-                            {minDevVal !== Infinity
-                              ? minDevVal.toFixed(2)
-                              : '0.00'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Card 8: Lone Wolf */}
-                {(() => {
-                  let maxDevUser = 'N/A';
-                  let maxDevVal = -1;
-                  users.forEach((u) => {
-                    let devSum = 0;
-                    let count = 0;
-                    towerMetrics.forEach((m) => {
-                      const s = getScore(u, m.tower);
-                      if (s > 0) {
-                        devSum += Math.abs(s - m.rawAvg);
-                        count++;
-                      }
-                    });
-                    const avgDev = count ? devSum / count : 0;
-                    if (avgDev > maxDevVal) {
-                      maxDevVal = avgDev;
-                      maxDevUser = u;
-                    }
-                  });
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-pink-500/20 border border-pink-500/30 text-pink-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          🐺
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Lone Wolf
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Highest team deviation
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-pink-300 block truncate'>
-                            {maxDevUser}
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            Farthest from consensus
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Avg Dev
-                          </span>
-                          <span className='font-mono text-pink-400 font-extrabold text-sm'>
-                            {maxDevVal.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* SECTION 3: CONTROLLER SCORING PERSONALITIES */}
-            <div className='space-y-4'>
-              <div className='flex items-center gap-2 border-b border-slate-800/80 pb-2'>
-                <span className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
-                  Controller Scoring Personalities
-                </span>
-              </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-                {/* Card 9: Team Optimist */}
-                {(() => {
-                  const optimist = users.reduce(
-                    (best, u) => {
-                      const uScores = Object.values(ratings[u] || {}).filter(
-                        (s) => s > 0,
-                      );
-                      const avg = uScores.length
-                        ? uScores.reduce((a, b) => a + b, 0) / uScores.length
-                        : 0;
-                      return avg > best.avg
-                        ? { name: u, avg: avg.toFixed(2) }
-                        : best;
-                    },
-                    { name: 'N/A', avg: 0 },
-                  );
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          🌟
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Team Optimist
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Highest overall average
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-sky-300 block truncate'>
-                            {optimist.name}
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            Generous scoring
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            User Avg
-                          </span>
-                          <span className='font-mono text-sky-400 font-extrabold text-sm'>
-                            {optimist.avg}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Card 10: Strict Critic */}
-                {(() => {
-                  const realist = users.reduce(
-                    (strict, u) => {
-                      const uScores = Object.values(ratings[u] || {}).filter(
-                        (s) => s > 0,
-                      );
-                      const avg = uScores.length
-                        ? uScores.reduce((a, b) => a + b, 0) / uScores.length
-                        : 5;
-                      return avg < strict.avg
-                        ? { name: u, avg: avg.toFixed(2) }
-                        : strict;
-                    },
-                    { name: 'N/A', avg: 5 },
-                  );
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          🎯
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Strict Critic
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Lowest overall average
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-orange-300 block truncate'>
-                            {realist.name}
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            Tough standards
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            User Avg
-                          </span>
-                          <span className='font-mono text-orange-400 font-extrabold text-sm'>
-                            {realist.avg}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Card 11: Fence Sitter (Lowest Rating Variance) */}
-                {(() => {
-                  let fenceUser = 'N/A';
-                  let minVar = Infinity;
-
-                  users.forEach((u) => {
-                    const uScores = Object.values(ratings[u] || {}).filter(
-                      (s) => s > 0,
-                    );
-                    if (uScores.length > 1) {
-                      const avg =
-                        uScores.reduce((a, b) => a + b, 0) / uScores.length;
-                      const variance =
-                        uScores.reduce(
-                          (acc, val) => acc + Math.pow(val - avg, 2),
-                          0,
-                        ) / uScores.length;
-                      if (variance < minVar) {
-                        minVar = variance;
-                        fenceUser = u;
-                      }
-                    }
-                  });
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          🪵
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Fence Sitter
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Lowest rating variance
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-violet-300 block truncate'>
-                            {fenceUser}
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            Consistent scoring
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Variance
-                          </span>
-                          <span className='font-mono text-violet-400 font-extrabold text-sm'>
-                            {minVar !== Infinity ? minVar.toFixed(2) : '0.00'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Card 12: Extremist (Highest Rating Variance) */}
-                {(() => {
-                  let extremeUser = 'N/A';
-                  let maxVar = -1;
-
-                  users.forEach((u) => {
-                    const uScores = Object.values(ratings[u] || {}).filter(
-                      (s) => s > 0,
-                    );
-                    if (uScores.length > 1) {
-                      const avg =
-                        uScores.reduce((a, b) => a + b, 0) / uScores.length;
-                      const variance =
-                        uScores.reduce(
-                          (acc, val) => acc + Math.pow(val - avg, 2),
-                          0,
-                        ) / uScores.length;
-                      if (variance > maxVar) {
-                        maxVar = variance;
-                        extremeUser = u;
-                      }
-                    }
-                  });
-
-                  return (
-                    <div className='bg-slate-950/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-inner space-y-4'>
-                      <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center justify-center font-bold text-lg shrink-0'>
-                          🔥
-                        </div>
-                        <div>
-                          <h3 className='font-bold text-slate-100 text-sm'>
-                            Extremist
-                          </h3>
-                          <p className='text-[11px] text-slate-400 line-clamp-1'>
-                            Highest rating variance
-                          </p>
-                        </div>
-                      </div>
-                      <div className='bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center gap-2'>
-                        <div className='min-w-0'>
-                          <span className='font-bold text-sm text-red-300 block truncate'>
-                            {extremeUser}
-                          </span>
-                          <span className='text-[11px] text-slate-400 block truncate mt-0.5'>
-                            Polarised spread
-                          </span>
-                        </div>
-                        <div className='text-right shrink-0'>
-                          <span className='text-[10px] text-slate-400 block font-semibold'>
-                            Variance
-                          </span>
-                          <span className='font-mono text-red-400 font-extrabold text-sm'>
-                            {maxVar !== -1 ? maxVar.toFixed(2) : '0.00'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
+            ))}
           </section>
         </main>
       )}
@@ -2414,140 +3002,20 @@ function App() {
               </div>
 
               <div className='grid grid-cols-1 md:grid-cols-3 gap-6 items-start'>
-                {categoryStats.map((cat, idx) => {
-                  const catItems = towerMetrics.filter(
-                    (m) => m.category === cat.category,
-                  );
-                  const ratedCatItems = catItems.filter(
-                    (m) => m.ratingsCount > 0,
-                  );
-
-                  let topController = 'N/A';
-                  let lowestController = 'N/A';
-                  let bottomPick = 'N/A';
-
-                  if (ratedCatItems.length > 0) {
-                    const sortedCatTowers = [...ratedCatItems].sort(
-                      (a, b) =>
-                        b.rawAvg - a.rawAvg ||
-                        b.ratingsCount - a.ratingsCount ||
-                        a.tower.localeCompare(b.tower),
-                    );
-                    if (sortedCatTowers.length > 1) {
-                      bottomPick =
-                        sortedCatTowers[sortedCatTowers.length - 1].tower;
-                    }
-
-                    const controllerCatAvgs = users
-                      .map((u) => {
-                        let sum = 0;
-                        let count = 0;
-                        ratedCatItems.forEach((m) => {
-                          const s = ratings[u]?.[m.tower];
-                          if (s !== undefined && s > 0) {
-                            sum += s;
-                            count++;
-                          }
-                        });
-                        return {
-                          user: u,
-                          avg: count > 0 ? sum / count : -1,
-                          count,
-                        };
-                      })
-                      .filter((x) => x.count > 0);
-
-                    if (controllerCatAvgs.length > 0) {
-                      controllerCatAvgs.sort(
-                        (a, b) => b.avg - a.avg || a.user.localeCompare(b.user),
-                      );
-                      const highestVal = controllerCatAvgs[0].avg;
-                      const topUsers = controllerCatAvgs
-                        .filter((x) => x.avg === highestVal)
-                        .map((x) => x.user);
-                      topController = topUsers.join(', ');
-
-                      const lowestVal =
-                        controllerCatAvgs[controllerCatAvgs.length - 1].avg;
-                      const lowestUsers = controllerCatAvgs
-                        .filter((x) => x.avg === lowestVal)
-                        .map((x) => x.user);
-                      lowestController = lowestUsers.join(', ');
-                    }
-                  }
-
-                  return (
-                    <div
-                      key={cat.category}
-                      className='bg-gradient-to-b from-slate-950/90 to-slate-950/70 border border-slate-800/90 p-6 rounded-3xl flex flex-col shadow-xl transition-all duration-300 hover:border-slate-700 hover:shadow-sky-950/20'
-                    >
-                      {/* Card Header & Pill Badge */}
-                      <div className='flex justify-between items-center gap-3 mb-5'>
-                        <div className='flex items-center gap-3'>
-                          <span className='w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 font-extrabold text-xs text-sky-400 flex items-center justify-center shrink-0 shadow-inner'>
-                            #{idx + 1}
-                          </span>
-                          <CategoryBadge category={cat.category} />
-                        </div>
-                        <span className='text-xs font-mono text-slate-400 font-semibold'>
-                          {cat.count} {cat.count === 1 ? 'Tower' : 'Towers'}
-                        </span>
-                      </div>
-
-                      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-4 mb-5 flex items-center justify-between shadow-inner'>
-                        <span className='text-xs font-bold text-slate-400 uppercase tracking-wider'>
-                          Group Average
-                        </span>
-                        <div className='flex items-baseline gap-1'>
-                          <span className='font-extrabold text-sky-400 text-xl'>
-                            {cat.avg}
-                          </span>
-                          <span className='text-xs text-slate-500 font-medium'>
-                            / 5
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Stat Metrics List with Matched Font Size and Spacing */}
-                      <div className='space-y-3 text-sm'>
-                        <div className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'>
-                          <span className='text-slate-300 font-medium'>
-                            {cat.count === 1 ? 'Tower' : 'Top Pick'}
-                          </span>
-                          <span className='font-bold text-emerald-400 text-right break-words'>
-                            {cat.topTower}
-                          </span>
-                        </div>
-                        {cat.count > 1 && (
-                          <div className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'>
-                            <span className='text-slate-300 font-medium'>
-                              Bottom Pick
-                            </span>
-                            <span className='font-bold text-rose-400 text-right break-words'>
-                              {bottomPick}
-                            </span>
-                          </div>
-                        )}
-                        <div className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'>
-                          <span className='text-slate-300 font-medium'>
-                            Top Rated
-                          </span>
-                          <span className='font-bold text-sky-300 text-right break-words'>
-                            {topController}
-                          </span>
-                        </div>
-                        <div className='flex justify-between items-start gap-4 bg-slate-900/40 hover:bg-slate-900/60 transition px-4 py-3 rounded-2xl border border-slate-800/60'>
-                          <span className='text-slate-300 font-medium'>
-                            Bottom Rated
-                          </span>
-                          <span className='font-bold text-orange-300 text-right break-words'>
-                            {lowestController}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {categoryStats.map((cat, idx) => (
+                  <GroupCard
+                    key={cat.category}
+                    kind='Category'
+                    rank={idx + 1}
+                    theme={CATEGORY_THEME[cat.category]}
+                    label={cat.category}
+                    count={cat.count}
+                    avg={cat.avg}
+                    avgLabel='Group Average'
+                    rows={groupRows(cat)}
+                    large
+                  />
+                ))}
               </div>
             </div>
 
@@ -2566,147 +3034,34 @@ function App() {
               </div>
 
               <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start'>
-                {stateStats.map((st, idx) => {
-                  const stItems = towerMetrics.filter(
-                    (m) => m.state === st.state,
-                  );
-                  const ratedStItems = stItems.filter(
-                    (m) => m.ratingsCount > 0,
-                  );
-
-                  let topController = 'N/A';
-                  let lowestController = 'N/A';
-                  let bottomPick = 'N/A';
-
-                  if (ratedStItems.length > 0) {
-                    const sortedStTowers = [...ratedStItems].sort(
-                      (a, b) =>
-                        b.rawAvg - a.rawAvg ||
-                        b.ratingsCount - a.ratingsCount ||
-                        a.tower.localeCompare(b.tower),
-                    );
-                    if (sortedStTowers.length > 1) {
-                      bottomPick =
-                        sortedStTowers[sortedStTowers.length - 1].tower;
-                    }
-
-                    const controllerStAvgs = users
-                      .map((u) => {
-                        let sum = 0;
-                        let count = 0;
-                        ratedStItems.forEach((m) => {
-                          const s = ratings[u]?.[m.tower];
-                          if (s !== undefined && s > 0) {
-                            sum += s;
-                            count++;
-                          }
-                        });
-                        return {
-                          user: u,
-                          avg: count > 0 ? sum / count : -1,
-                          count,
-                        };
-                      })
-                      .filter((x) => x.count > 0);
-
-                    if (controllerStAvgs.length > 0) {
-                      controllerStAvgs.sort(
-                        (a, b) => b.avg - a.avg || a.user.localeCompare(b.user),
-                      );
-                      const highestVal = controllerStAvgs[0].avg;
-                      const topUsers = controllerStAvgs
-                        .filter((x) => x.avg === highestVal)
-                        .map((x) => x.user);
-                      topController = topUsers.join(', ');
-
-                      const lowestVal =
-                        controllerStAvgs[controllerStAvgs.length - 1].avg;
-                      const lowestUsers = controllerStAvgs
-                        .filter((x) => x.avg === lowestVal)
-                        .map((x) => x.user);
-                      lowestController = lowestUsers.join(', ');
-                    }
-                  }
-
-                  return (
-                    <div
-                      key={st.state}
-                      className='bg-gradient-to-b from-slate-950/90 to-slate-950/70 border border-slate-800/90 p-5 rounded-3xl flex flex-col shadow-xl transition-all duration-300 hover:border-slate-700 hover:shadow-sky-950/20'
-                    >
-                      {/* Card Header & Average */}
-                      <div className='flex justify-between items-center gap-3 mb-4'>
-                        <div className='flex items-center gap-2.5'>
-                          <span className='w-7 h-7 rounded-xl bg-sky-500/10 border border-sky-500/20 font-extrabold text-[11px] text-sky-400 flex items-center justify-center shrink-0 shadow-inner'>
-                            #{idx + 1}
-                          </span>
-                          <StateBadge state={st.state} />
-                        </div>
-                        <span className='text-xs font-mono text-slate-400 font-semibold'>
-                          {st.count} {st.count === 1 ? 'Tower' : 'Towers'}
-                        </span>
-                      </div>
-
-                      <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3.5 mb-4 flex items-center justify-between shadow-inner'>
-                        <span className='text-xs font-bold text-slate-400 uppercase tracking-wider'>
-                          State Average
-                        </span>
-                        <div className='flex items-baseline gap-1'>
-                          <span className='font-extrabold text-sky-400 text-lg'>
-                            {st.avg}
-                          </span>
-                          <span className='text-xs text-slate-500 font-medium'>
-                            / 5
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Stat Metrics List with 'By' removed */}
-                      <div className='space-y-2 text-xs'>
-                        <div className='flex justify-between items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 transition px-3 py-2 rounded-xl border border-slate-800/60'>
-                          <span className='text-slate-400 font-medium'>
-                            {st.count === 1 ? 'Tower' : 'Top Pick'}
-                          </span>
-                          <span className='font-bold text-emerald-400 text-right truncate'>
-                            {st.topTower}
-                          </span>
-                        </div>
-                        {st.count > 1 && (
-                          <div className='flex justify-between items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 transition px-3 py-2 rounded-xl border border-slate-800/60'>
-                            <span className='text-slate-400 font-medium'>
-                              Bottom Pick
-                            </span>
-                            <span className='font-bold text-rose-400 text-right truncate'>
-                              {bottomPick}
-                            </span>
-                          </div>
-                        )}
-                        <div className='flex justify-between items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 transition px-3 py-2 rounded-xl border border-slate-800/60'>
-                          <span className='text-slate-400 font-medium'>
-                            Top Rated
-                          </span>
-                          <span className='font-bold text-sky-300 text-right truncate'>
-                            {topController}
-                          </span>
-                        </div>
-                        <div className='flex justify-between items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 transition px-3 py-2 rounded-xl border border-slate-800/60'>
-                          <span className='text-slate-400 font-medium'>
-                            Bottom Rated
-                          </span>
-                          <span className='font-bold text-orange-300 text-right truncate'>
-                            {lowestController}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {stateStats.map((st, idx) => (
+                  <GroupCard
+                    key={st.state}
+                    kind='State'
+                    rank={idx + 1}
+                    theme={STATE_THEME[st.state]}
+                    label={st.state}
+                    count={st.count}
+                    avg={st.avg}
+                    avgLabel='State Average'
+                    rows={groupRows(st)}
+                  />
+                ))}
               </div>
             </div>
           </section>
         </main>
       )}
 
-      {/* Dark Confirmation Modal */}
+      {showHelper && (
+        <RankHelper
+          userRatings={ratings[currentUser] || {}}
+          onApply={handleBulkRatings}
+          onClose={() => setShowHelper(false)}
+        />
+      )}
+
+      {/* Reset Confirmation Modal */}
       {showResetModal && (
         <div
           className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md'
@@ -2714,31 +3069,17 @@ function App() {
           aria-modal='true'
           aria-labelledby='modal-title'
         >
-          <div className='bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-4'>
-            <div className='flex items-center gap-3'>
-              <div
-                className='w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center font-bold text-lg'
-                aria-hidden='true'
-              >
-                ⚠️
-              </div>
-              <div>
-                <h3
-                  id='modal-title'
-                  className='text-lg font-bold text-slate-100'
-                >
-                  Reset Controller Ratings?
-                </h3>
-                <p className='text-xs text-slate-400'>
-                  Action cannot be undone
-                </p>
-              </div>
-            </div>
-
+          <PlainCard
+            className='max-w-md w-full shadow-2xl bg-slate-900'
+            lead={<IconBox>⚠️</IconBox>}
+            title={<span id='modal-title'>Reset Controller Ratings?</span>}
+            bodyClassName='px-6 pb-6 pt-4 space-y-4'
+          >
             <p className='text-sm text-slate-300 leading-relaxed'>
               Are you sure you want to reset all tower ratings for{' '}
-              <strong className='text-sky-300'>{currentUser}</strong>? All 31
-              towers will revert to unrated status.
+              <strong className='text-sky-300'>{currentUser}</strong>? All{' '}
+              {ALL_TOWERS.length} towers will revert to unrated. This cannot be
+              undone.
             </p>
 
             <div className='flex justify-end gap-3 pt-2'>
@@ -2751,12 +3092,12 @@ function App() {
               </button>
               <button
                 onClick={confirmResetUserRatings}
-                className='px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold rounded-2xl transition duration-200 shadow-lg shadow-rose-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-450'
+                className='px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold rounded-2xl transition duration-200 shadow-lg shadow-rose-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400'
               >
                 Confirm Reset
               </button>
             </div>
-          </div>
+          </PlainCard>
         </div>
       )}
     </div>
