@@ -6,6 +6,9 @@ const { useState, useEffect, useRef } = React;
 // ----------------------------------------------------------------------------
 const GOOGLE_SHEET_API_URL =
   'https://script.google.com/macros/s/AKfycbyaqvJXQEsiohIaS-hqEv8pB7ly9sw2XBPOuslNttmIxd64L7ronT2hg1N62yEQtMoJ/exec';
+const RATINGS_STORAGE_KEY = 'atc_tower_rankings_gsheet';
+const RATINGS_OUTBOX_KEY = 'atc_tower_rankings_outbox';
+const RATINGS_DIRTY_KEY = 'atc_tower_rankings_dirty';
 
 // Tower metadata with clean Radar, Regional, Metro D taxonomy and Australian State codes
 const TOWER_METADATA = {
@@ -61,6 +64,14 @@ const CONTROLLERS = [
 const DEFAULT_SCORE = 3; // Unrated towers count as 3 in the draft and stats
 const UNRATED_SCORE = 0; // Stored value meaning "not rated"
 
+function ratingColorClass(value) {
+  if (value < 1.5) return 'text-rose-400';
+  if (value < 2.5) return 'text-orange-400';
+  if (value < 3.5) return 'text-amber-300';
+  if (value < 4.5) return 'text-sky-300';
+  return 'text-emerald-300';
+}
+
 // State Badge styling lookup (Optimised contrast for dark mode)
 const STATE_BADGE_CLASSES = {
   VIC: 'bg-indigo-950/80 text-indigo-300 border-indigo-700/60',
@@ -80,31 +91,44 @@ const CATEGORY_BADGE_CLASSES = {
   'Metro D': 'bg-fuchsia-950/80 text-fuchsia-300 border-fuchsia-700/60',
 };
 
-function StateBadge({ state }) {
-  const colorStyle =
-    STATE_BADGE_CLASSES[state] ||
-    'bg-slate-900 text-slate-300 border-slate-700';
+function MetadataBadge({ label, colorStyle, weight, children }) {
   return (
     <span
-      className={`text-[11px] px-2.5 py-0.5 rounded-md border font-bold ${colorStyle}`}
+      className={`text-[11px] whitespace-nowrap px-2.5 py-0.5 rounded-md border ${weight} ${colorStyle}`}
     >
-      <span className='sr-only'>State: </span>
-      {state}
+      <span className='sr-only'>{label}: </span>
+      {children}
     </span>
   );
 }
 
-function CategoryBadge({ category }) {
-  const colorStyle =
-    CATEGORY_BADGE_CLASSES[category] ||
-    'bg-slate-900 text-slate-300 border-slate-700';
+function StateBadge({ state }) {
   return (
-    <span
-      className={`text-[11px] px-2.5 py-0.5 rounded-md border font-semibold ${colorStyle}`}
+    <MetadataBadge
+      label='State'
+      colorStyle={
+        STATE_BADGE_CLASSES[state] ||
+        'bg-slate-900 text-slate-300 border-slate-700'
+      }
+      weight='font-bold'
     >
-      <span className='sr-only'>Category: </span>
+      {state}
+    </MetadataBadge>
+  );
+}
+
+function CategoryBadge({ category }) {
+  return (
+    <MetadataBadge
+      label='Category'
+      colorStyle={
+        CATEGORY_BADGE_CLASSES[category] ||
+        'bg-slate-900 text-slate-300 border-slate-700'
+      }
+      weight='font-semibold'
+    >
       {category}
-    </span>
+    </MetadataBadge>
   );
 }
 
@@ -342,10 +366,10 @@ function ThemedCard({
   return (
     <div
       {...rest}
-      className={`relative rounded-3xl flex flex-col shadow-xl overflow-hidden border-2 min-w-0 transition-all duration-300 ${t.border} ${flashClass} ${className}`}
+      className={`app-themed-card relative rounded-2xl flex flex-col shadow-xl overflow-hidden border min-w-0 transition-all duration-200 ${t.border} ${flashClass} ${className}`}
     >
       <div
-        className={`px-4 py-3.5 flex flex-wrap items-center gap-3 ${t.banner}`}
+        className={`app-card-header px-4 py-3.5 flex flex-wrap items-center gap-3 ${t.banner}`}
       >
         {lead}
         <span
@@ -359,7 +383,7 @@ function ThemedCard({
           </div>
         )}
       </div>
-      <div className={`bg-slate-950/80 flex-1 ${bodyClassName}`}>
+      <div className={`app-card-body bg-slate-950/80 flex-1 ${bodyClassName}`}>
         {children}
       </div>
       {flashClass && (
@@ -492,25 +516,25 @@ function PlainCard({
     <div
       {...rest}
       title={tooltip}
-      className={`relative rounded-2xl flex flex-col border shadow-inner min-w-0 overflow-hidden transition duration-200 ${toneClass} ${flashClass} ${className}`}
+      className={`app-card relative rounded-2xl flex flex-col border shadow-inner min-w-0 overflow-hidden transition duration-200 ${toneClass} ${flashClass} ${className}`}
     >
       {hasHeader && (
-        <div className='px-4 pt-4 flex flex-wrap items-center gap-3'>
+        <div className='app-card-header px-4 pt-4 flex flex-wrap items-center gap-3'>
           {lead}
           {heading && (
-            <span className='font-bold text-slate-100 text-base min-w-0 break-words'>
+            <span className='app-card-title font-bold text-slate-100 text-base min-w-0 break-words'>
               {heading}
             </span>
           )}
           {aside && (
-            <div className='ml-auto flex items-center gap-2 shrink-0'>
+            <div className='ml-auto flex flex-wrap items-center justify-end gap-2 min-w-0'>
               {aside}
             </div>
           )}
         </div>
       )}
       <div
-        className={`flex-1 ${bodyClassName || (hasHeader ? 'px-4 pb-4 pt-3' : 'p-4')}`}
+        className={`app-card-body flex-1 ${bodyClassName || (hasHeader ? 'px-4 pb-4 pt-3' : 'p-4')}`}
       >
         {children}
       </div>
@@ -672,12 +696,14 @@ function ChoiceCard({ tower, hint, onPick }) {
       }}
       className='cursor-pointer hover:border-sky-500/70 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
       title={tower}
+      aside={
+        <div className='flex flex-wrap items-center gap-1.5'>
+          <CategoryBadge category={meta.category} />
+          <StateBadge state={meta.state} />
+        </div>
+      }
       bodyClassName='px-5 pb-5 pt-3 flex flex-col gap-4'
     >
-      <div className='flex flex-wrap items-center gap-1.5'>
-        <CategoryBadge category={meta.category} />
-        <StateBadge state={meta.state} />
-      </div>
       <span className='text-sm font-bold text-sky-300'>{hint}</span>
     </PlainCard>
   );
@@ -1061,16 +1087,19 @@ function App() {
   const [saveToast, setSaveToast] = useState({
     visible: false,
     user: '',
-    isSuccess: false,
+    status: 'queued',
   });
 
   const cancelButtonRef = useRef(null);
-  // Rating saves: every click is applied to the latest ratings immediately,
-  // saves are sent one at a time in click order, and cloud polls are ignored
-  // while a save is pending so they can't overwrite a newer rating.
+  // Rating changes apply locally immediately; cloud writes are queued and
+  // cloud polls are ignored while a save is pending.
   const ratingsRef = useRef({});
   const pendingSavesRef = useRef(0);
-  const saveChainRef = useRef(Promise.resolve());
+  const pendingRatingSavesRef = useRef([]);
+  const activeSaveIdsRef = useRef(new Set());
+  const activeSaveKeysRef = useRef(new Set());
+  const saveWorkerRef = useRef(null);
+  const ratingsInitialisedRef = useRef(false);
   const saveVersionRef = useRef(0);
   const lastSaveEndRef = useRef(0);
   const toastTimerRef = useRef(null);
@@ -1111,15 +1140,63 @@ function App() {
     setRatings(next);
   };
 
-  // Initial load from localStorage
+  const persistLocalRatings = (next) => {
+    if (cloudEnabled()) localStorage.setItem(RATINGS_DIRTY_KEY, '1');
+    localStorage.setItem(RATINGS_STORAGE_KEY, JSON.stringify(next));
+  };
+
+  const persistPendingRatingSaves = (next) => {
+    pendingRatingSavesRef.current = next;
+    localStorage.setItem(RATINGS_OUTBOX_KEY, JSON.stringify(next));
+  };
+
+  // Restore local ratings and any cloud writes interrupted by a refresh/close.
   useEffect(() => {
-    const saved = localStorage.getItem('atc_tower_rankings_gsheet');
-    if (saved) {
-      try {
-        applyRatings(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
+    try {
+      const saved = localStorage.getItem(RATINGS_STORAGE_KEY);
+      if (saved) applyRatings(JSON.parse(saved));
+
+      const outbox = localStorage.getItem(RATINGS_OUTBOX_KEY);
+      if (outbox) {
+        const parsedOutbox = JSON.parse(outbox);
+        if (!Array.isArray(parsedOutbox)) {
+          throw new Error('Saved rating outbox is not a list');
+        }
+        const latestByRating = new Map();
+        parsedOutbox.forEach((pending) => {
+          latestByRating.set(ratingSaveKey(pending), pending);
+        });
+        persistPendingRatingSaves([...latestByRating.values()]);
       }
+
+      if (
+        cloudEnabled() &&
+        localStorage.getItem(RATINGS_DIRTY_KEY) &&
+        pendingRatingSavesRef.current.length === 0
+      ) {
+        const localRatings = ratingsRef.current;
+        const recoveredSaves = CONTROLLERS.flatMap((controller) =>
+          ALL_TOWERS.map((tower) => ({
+            id: `${Date.now()}-${Math.random()}`,
+            controller,
+            tower,
+            score: localRatings[controller]?.[tower] ?? UNRATED_SCORE,
+          })),
+        );
+        persistPendingRatingSaves(recoveredSaves);
+      }
+
+      ratingsInitialisedRef.current = true;
+      if (pendingRatingSavesRef.current.length > 0) {
+        setSyncStatus('Saving...');
+        flushPendingRatingSaves().catch((error) => {
+          console.error('Unable to restore pending rating saves:', error);
+          setSyncStatus('Offline');
+        });
+      }
+    } catch (error) {
+      console.error('Unable to restore locally saved ratings:', error);
+      setSyncStatus('Local Recovery Error');
     }
   }, []);
 
@@ -1140,7 +1217,19 @@ function App() {
 
   // Fetch live ratings from Cloud API
   const fetchCloudRatings = async () => {
-    if (pendingSavesRef.current > 0) return;
+    if (
+      !ratingsInitialisedRef.current ||
+      pendingSavesRef.current > 0 ||
+      pendingRatingSavesRef.current.length > 0
+    ) {
+      if (ratingsInitialisedRef.current && pendingRatingSavesRef.current.length) {
+        flushPendingRatingSaves().catch((error) => {
+          console.error('Unable to retry pending rating saves:', error);
+          setSyncStatus('Offline');
+        });
+      }
+      return;
+    }
 
     if (
       !GOOGLE_SHEET_API_URL ||
@@ -1164,9 +1253,9 @@ function App() {
         }
         if (cloudData && typeof cloudData === 'object') {
           const cloudJson = JSON.stringify(cloudData);
-          if (cloudJson !== localStorage.getItem('atc_tower_rankings_gsheet')) {
+          if (cloudJson !== localStorage.getItem(RATINGS_STORAGE_KEY)) {
             applyRatings(cloudData);
-            localStorage.setItem('atc_tower_rankings_gsheet', cloudJson);
+            localStorage.setItem(RATINGS_STORAGE_KEY, cloudJson);
           }
           setSyncStatus('Synced');
         }
@@ -1181,7 +1270,19 @@ function App() {
   useEffect(() => {
     fetchCloudRatings();
     const interval = setInterval(fetchCloudRatings, 15000);
-    return () => clearInterval(interval);
+    const retryPendingSaves = () => {
+      if (pendingRatingSavesRef.current.length > 0) {
+        flushPendingRatingSaves().catch((error) => {
+          console.error('Unable to retry pending rating saves:', error);
+          setSyncStatus('Offline');
+        });
+      }
+    };
+    window.addEventListener('online', retryPendingSaves);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', retryPendingSaves);
+    };
   }, []);
 
   useEffect(() => {
@@ -1194,13 +1295,11 @@ function App() {
     setManualLocks({});
   };
 
-  // Lock/unlock `tower` as controller `u`'s #1. Used by the form guide rows and
-  // the Assigned Placements cards. `fromCard` stops that card flashing itself.
-  const toggleLock = (u, tower, fromCard = false) => {
+  // Lock/unlock `tower` as controller `u`'s #1 from the form guide rows.
+  const toggleLock = (u, tower) => {
     clickedRowRef.current = {
       user: u,
       tower,
-      fromCard,
       until: Date.now() + 800,
     };
     setManualLocks((prev) => {
@@ -1247,26 +1346,134 @@ function App() {
     GOOGLE_SHEET_API_URL &&
     !GOOGLE_SHEET_API_URL.includes('YOUR_GOOGLE_APPS_SCRIPT');
 
-  // Queue one save. Saves run strictly in click order.
-  const queueSave = (payload) => {
-    pendingSavesRef.current += 1;
-    saveVersionRef.current += 1;
-    const job = saveChainRef.current.then(() =>
-      fetch(GOOGLE_SHEET_API_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
-    );
-    saveChainRef.current = job.catch(() => {});
-    return job.finally(() => {
-      pendingSavesRef.current -= 1;
-      lastSaveEndRef.current = Date.now();
-    });
+  const ratingSaveKey = ({ controller, tower }) => `${controller}\u0000${tower}`;
+
+  // Persist first, then save independent ratings concurrently without letting
+  // rapid edits to the same rating arrive out of order.
+  const flushPendingRatingSaves = async () => {
+    if (!cloudEnabled()) return;
+    if (saveWorkerRef.current) return saveWorkerRef.current;
+
+    const worker = (async () => {
+      let lastSavedController = '';
+      while (pendingRatingSavesRef.current.length > 0) {
+        const batch = [];
+        const batchKeys = new Set();
+        for (const pending of pendingRatingSavesRef.current) {
+          const key = ratingSaveKey(pending);
+          if (
+            batch.length >= 6 ||
+            batchKeys.has(key) ||
+            activeSaveKeysRef.current.has(key)
+          ) {
+            continue;
+          }
+          batch.push(pending);
+          batchKeys.add(key);
+        }
+
+        if (batch.length === 0) break;
+        batch.forEach((pending) => {
+          activeSaveIdsRef.current.add(pending.id);
+          activeSaveKeysRef.current.add(ratingSaveKey(pending));
+          pendingSavesRef.current += 1;
+        });
+
+        const results = await Promise.all(
+          batch.map(async (pending) => {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
+            try {
+              const response = await fetch(GOOGLE_SHEET_API_URL, {
+                method: 'POST',
+                signal: controller.signal,
+                body: JSON.stringify({
+                  controller: pending.controller,
+                  tower: pending.tower,
+                  score: pending.score,
+                }),
+              });
+              if (!response.ok) {
+                throw new Error(`Rating save failed with HTTP ${response.status}`);
+              }
+              persistPendingRatingSaves(
+                pendingRatingSavesRef.current.filter(
+                  (item) => item.id !== pending.id,
+                ),
+              );
+              lastSavedController = pending.controller;
+              lastSaveEndRef.current = Date.now();
+              return null;
+            } catch (error) {
+              return error;
+            } finally {
+              clearTimeout(timeout);
+              activeSaveIdsRef.current.delete(pending.id);
+              activeSaveKeysRef.current.delete(ratingSaveKey(pending));
+              pendingSavesRef.current -= 1;
+            }
+          }),
+        );
+
+        const failedSave = results.find(Boolean);
+        if (failedSave) throw failedSave;
+      }
+      if (pendingRatingSavesRef.current.length === 0) {
+        localStorage.removeItem(RATINGS_DIRTY_KEY);
+        setSyncStatus('Synced');
+        clearTimeout(toastTimerRef.current);
+        setSaveToast((prev) => ({
+          visible: true,
+          user: prev.user || lastSavedController,
+          status: 'saved',
+        }));
+        toastTimerRef.current = setTimeout(
+          () => setSaveToast((prev) => ({ ...prev, visible: false })),
+          2500,
+        );
+      } else {
+        throw new Error('Rating saves are waiting to retry');
+      }
+    })();
+
+    saveWorkerRef.current = worker;
+    try {
+      await worker;
+    } finally {
+      if (saveWorkerRef.current === worker) saveWorkerRef.current = null;
+    }
   };
 
-  const showToast = (user, isSuccess, hideAfter) => {
+  const queueSave = (payload) => {
+    const pending = {
+      ...payload,
+      id: `${Date.now()}-${Math.random()}`,
+    };
+    const key = ratingSaveKey(pending);
+    const next = [...pendingRatingSavesRef.current];
+    let replaceIndex = -1;
+    for (let index = next.length - 1; index >= 0; index -= 1) {
+      if (
+        ratingSaveKey(next[index]) === key &&
+        !activeSaveIdsRef.current.has(next[index].id)
+      ) {
+        replaceIndex = index;
+        break;
+      }
+    }
+    if (replaceIndex >= 0) {
+      next[replaceIndex] = pending;
+    } else {
+      next.push(pending);
+    }
+    persistPendingRatingSaves(next);
+    saveVersionRef.current += 1;
+    return flushPendingRatingSaves();
+  };
+
+  const showToast = (user, status, hideAfter) => {
     clearTimeout(toastTimerRef.current);
-    setSaveToast({ visible: true, user, isSuccess });
+    setSaveToast({ visible: true, user, status });
     if (hideAfter) {
       toastTimerRef.current = setTimeout(
         () => setSaveToast((prev) => ({ ...prev, visible: false })),
@@ -1286,23 +1493,26 @@ function App() {
       [activeUser]: { ...(prev[activeUser] || {}), [tower]: score },
     };
     applyRatings(updated);
-    localStorage.setItem('atc_tower_rankings_gsheet', JSON.stringify(updated));
+    persistLocalRatings(updated);
 
     if (!cloudEnabled()) {
-      showToast(activeUser, true, 1500);
+      showToast(activeUser, 'saved', 2500);
       return;
     }
 
-    showToast(activeUser, false);
+    showToast(activeUser, 'saving');
     setSyncStatus('Saving...');
     try {
       await queueSave({ controller: activeUser, tower, score });
-      if (pendingSavesRef.current === 0) setSyncStatus('Synced');
+      if (pendingRatingSavesRef.current.length === 0) {
+        setSyncStatus('Synced');
+        showToast(activeUser, 'saved', 2500);
+      }
     } catch (err) {
-      setSyncStatus('Save Error');
+      console.error('Rating save remains queued locally:', err);
+      setSyncStatus('Offline');
+      showToast(activeUser, 'queued', 6000);
     }
-    // Only the last save in a burst updates the toast
-    if (pendingSavesRef.current === 0) showToast(activeUser, true, 2000);
   };
 
   const confirmResetUserRatings = async () => {
@@ -1311,14 +1521,14 @@ function App() {
 
     const updated = { ...ratingsRef.current, [activeUser]: {} };
     applyRatings(updated);
-    localStorage.setItem('atc_tower_rankings_gsheet', JSON.stringify(updated));
+    persistLocalRatings(updated);
 
     if (!cloudEnabled()) {
-      showToast(activeUser, true, 1500);
+      showToast(activeUser, 'saved', 2500);
       return;
     }
 
-    showToast(activeUser, false);
+    showToast(activeUser, 'saving');
     setSyncStatus('Resetting...');
     try {
       await Promise.all(
@@ -1330,11 +1540,15 @@ function App() {
           }),
         ),
       );
-      if (pendingSavesRef.current === 0) setSyncStatus('Synced');
+      if (pendingRatingSavesRef.current.length === 0) {
+        setSyncStatus('Synced');
+        showToast(activeUser, 'saved', 2500);
+      }
     } catch (err) {
-      setSyncStatus('Reset Locally');
+      console.error('Reset remains queued locally:', err);
+      setSyncStatus('Offline');
+      showToast(activeUser, 'queued', 6000);
     }
-    if (pendingSavesRef.current === 0) showToast(activeUser, true, 2000);
   };
 
   // Save many ratings at once (used by the Help Me Decide helper)
@@ -1346,14 +1560,14 @@ function App() {
       [activeUser]: { ...(prev[activeUser] || {}), ...map },
     };
     applyRatings(updated);
-    localStorage.setItem('atc_tower_rankings_gsheet', JSON.stringify(updated));
+    persistLocalRatings(updated);
 
     if (!cloudEnabled()) {
-      showToast(activeUser, true, 1500);
+      showToast(activeUser, 'saved', 2500);
       return;
     }
 
-    showToast(activeUser, false);
+    showToast(activeUser, 'saving');
     setSyncStatus('Saving...');
     try {
       await Promise.all(
@@ -1361,11 +1575,15 @@ function App() {
           queueSave({ controller: activeUser, tower, score }),
         ),
       );
-      if (pendingSavesRef.current === 0) setSyncStatus('Synced');
+      if (pendingRatingSavesRef.current.length === 0) {
+        setSyncStatus('Synced');
+        showToast(activeUser, 'saved', 2500);
+      }
     } catch (err) {
-      setSyncStatus('Save Error');
+      console.error('Bulk rating save remains queued locally:', err);
+      setSyncStatus('Offline');
+      showToast(activeUser, 'queued', 6000);
     }
-    if (pendingSavesRef.current === 0) showToast(activeUser, true, 2000);
   };
 
   const getRatedCount = (user) => {
@@ -1768,7 +1986,9 @@ function App() {
           title: 'Partner in Crime',
           subtitle: 'Sharing the exact same brain.',
           name: twins ? twins.name : 'N/A',
-          detail: twins ? `Same score on ${twins.same} towers` : needRatings,
+          detail: twins
+            ? `${twins.same}/${ALL_TOWERS.length} towers match`
+            : needRatings,
           label: 'Gap',
           value: twins ? twins.gap.toFixed(2) : '0.00',
         },
@@ -1779,7 +1999,7 @@ function App() {
           subtitle: 'Completely opposite tastes.',
           name: opposites ? opposites.name : 'N/A',
           detail: opposites
-            ? `Same score on ${opposites.same} towers`
+            ? `${opposites.same}/${ALL_TOWERS.length} towers match`
             : needRatings,
           label: 'Gap',
           value: opposites ? opposites.gap.toFixed(2) : '0.00',
@@ -1945,16 +2165,11 @@ function App() {
     if (draftResult) {
       const prevOption = draftResult.options?.[selectedOptionIdx] || {};
       const nextOption = nextOptions[0] || {};
-      const click = clickedRowRef.current;
-      const recentClick = click && Date.now() < click.until;
       users.forEach((u) => {
         const from = prevOption[u]?.tower;
         const to = nextOption[u]?.tower;
         if (from && to && from !== to) {
           changed[u] = { from, to };
-          if (recentClick && u === click.user) {
-            changed[u].skipCard = click.fromCard;
-          }
         }
       });
     }
@@ -2062,18 +2277,29 @@ function App() {
 
   return (
     <div className='max-w-7xl mx-auto p-4 md:p-8 font-sans text-slate-100 antialiased relative min-h-screen bg-slate-950 flex flex-col'>
-      {/* Icon-Only Saving Status Bottom-Right Toast */}
+      {/* Rating save status */}
       <div
+        role='status'
         aria-live='polite'
-        className={`fixed bottom-6 right-6 z-50 transition-all duration-300 transform ${
+        className={`fixed bottom-5 right-5 z-50 transition-all duration-300 transform ${
           saveToast.visible
             ? 'translate-y-0 opacity-100 scale-100'
             : 'translate-y-3 opacity-0 scale-95 pointer-events-none'
         }`}
       >
-        <div className='bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl px-3.5 py-2.5 shadow-2xl flex items-center gap-3'>
-          <div className='w-7 h-7 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center shrink-0'>
-            {saveToast.isSuccess ? (
+        <div className='max-w-sm bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3'>
+          <div
+            className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+              saveToast.status === 'saved'
+                ? 'bg-emerald-500/15 border-emerald-500/30'
+                : saveToast.status === 'queued'
+                  ? 'bg-amber-500/15 border-amber-500/30'
+                  : 'bg-sky-500/15 border-sky-500/30'
+            }`}
+          >
+            {saveToast.status === 'queued' ? (
+              <span className='text-amber-300 font-black'>!</span>
+            ) : saveToast.status === 'saved' ? (
               <svg
                 className='w-4 h-4 text-emerald-400'
                 fill='none'
@@ -2089,7 +2315,11 @@ function App() {
               </svg>
             ) : (
               <svg
-                className='w-4 h-4 animate-spin text-sky-400'
+                className={`w-4 h-4 ${
+                  saveToast.status === 'saving'
+                    ? 'animate-spin text-sky-400'
+                    : 'text-amber-300'
+                }`}
                 fill='none'
                 viewBox='0 0 24 24'
               >
@@ -2110,22 +2340,31 @@ function App() {
             )}
           </div>
 
-          <div className='flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800 text-xs font-bold text-sky-300 shadow-inner'>
-            <svg
-              className='w-3.5 h-3.5 text-sky-400'
-              fill='none'
-              stroke='currentColor'
-              viewBox='0 0 24 24'
-            >
-              <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
-                strokeWidth='2'
-                d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
-              ></path>
-            </svg>
-            <span>{saveToast.user}</span>
+          <div className='min-w-0 flex-1'>
+            <p className='text-sm font-bold text-slate-100'>
+              {saveToast.status === 'saved'
+                ? 'Rating saved'
+                : saveToast.status === 'queued'
+                  ? 'Sync paused'
+                  : 'Saving rating'}
+            </p>
+            <p className='mt-0.5 text-xs text-slate-400'>
+              {saveToast.status === 'queued'
+                ? 'Cloud sync will retry.'
+                : `Profile: ${saveToast.user}`}
+            </p>
           </div>
+          <button
+            type='button'
+            aria-label='Dismiss save status'
+            onClick={() => {
+              clearTimeout(toastTimerRef.current);
+              setSaveToast((prev) => ({ ...prev, visible: false }));
+            }}
+            className='-mr-1 -mt-1 rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
+          >
+            <span aria-hidden='true'>×</span>
+          </button>
         </div>
       </div>
 
@@ -2411,12 +2650,14 @@ function App() {
                     <PlainCard
                       key={tower}
                       title={tower}
-                      bodyClassName='px-4 pb-4 pt-2 space-y-4'
+                      aside={
+                        <div className='flex flex-wrap items-center gap-2'>
+                          <CategoryBadge category={meta.category} />
+                          <StateBadge state={meta.state} />
+                        </div>
+                      }
+                      bodyClassName='px-4 pb-4 pt-3 space-y-4'
                     >
-                      <div className='flex items-center gap-2.5'>
-                        <CategoryBadge category={meta.category} />
-                        <StateBadge state={meta.state} />
-                      </div>
                       <div
                         className='flex items-center justify-between gap-1.5'
                         role='group'
@@ -2605,8 +2846,8 @@ function App() {
                 </div>
               </div>
 
-              <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800/80 pb-4'>
-                <div className='min-h-[3rem]'>
+              <div className='flex flex-col sm:flex-row justify-between sm:items-baseline gap-1 border-b border-slate-800/80 pb-4'>
+                <div>
                   <h3 className='text-xl font-bold text-slate-100'>
                     Optimal Placement Results
                   </h3>
@@ -2617,12 +2858,14 @@ function App() {
                     </p>
                   )}
                 </div>
-                <div className='text-right'>
-                  <span className='text-2xl font-extrabold text-sky-400'>
-                    {draftResult.averageScore}{' '}
-                    <span className='text-xs text-slate-400 font-normal'>
-                      avg rating
-                    </span>
+                <div className='inline-flex items-baseline gap-1 text-right'>
+                  <span
+                    className={`text-2xl font-extrabold leading-none ${ratingColorClass(draftResult.averageScore)}`}
+                  >
+                    {draftResult.averageScore}
+                  </span>
+                  <span className='text-xs leading-none text-slate-400 font-normal'>
+                    avg rating
                   </span>
                 </div>
               </div>
@@ -2650,51 +2893,65 @@ function App() {
                       <PlainCard
                         key={u}
                         tone={isLocked ? 'success' : 'default'}
+                        flashClass={
+                          flashInfo ? `tie-flash-${tieFlash.id % 2}` : ''
+                        }
+                        className={`assigned-placement-card ${isLocked ? 'is-locked' : ''}`}
                         role='button'
                         tabIndex={0}
                         aria-pressed={isLocked}
-                        tooltip={`Click to ${isLocked ? 'unlock' : 'lock'} ${assignment.tower} for ${u}`}
-                        onClick={() =>
-                          assignment.tower &&
-                          toggleLock(u, assignment.tower, true)
-                        }
+                        tooltip={`${isLocked ? 'Unlock' : 'Lock'} ${assignment.tower} as #1 for ${u}`}
+                        onClick={() => assignment.tower && toggleLock(u, assignment.tower)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             if (assignment.tower)
-                              toggleLock(u, assignment.tower, true);
+                              toggleLock(u, assignment.tower);
                           }
                         }}
-                        flashClass={
-                          flashInfo && !flashInfo.skipCard
-                            ? `tie-flash-${tieFlash.id % 2}`
-                            : ''
-                        }
-                        className='cursor-pointer hover:border-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400'
-                        lead={<IconBox>{isLocked ? '🔒' : '🎯'}</IconBox>}
-                        title={u}
-                        aside={
-                          <>
-                            {flashInfo && !flashInfo.skipCard && (
-                              <span className='text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-950 border border-amber-500/70 text-amber-300'>
-                                was {flashInfo.from}
-                              </span>
-                            )}
-                            <span className='font-mono font-extrabold text-emerald-400 text-sm'>
-                              {assignment.score} / 5
-                            </span>
-                          </>
-                        }
-                        bodyClassName='px-4 pb-4 pt-2'
+                        bodyClassName='placement-card-body'
                       >
-                        <div className='flex flex-wrap items-center gap-x-2.5 gap-y-1.5'>
-                          <span
-                            className={`font-extrabold text-lg break-words ${isLocked ? 'text-emerald-300' : 'text-sky-300'}`}
-                          >
-                            {assignment.tower}
+                        <div className='placement-controller'>
+                          <span className='placement-side-label'>Controller</span>
+                          <span className='placement-controller-name'>{u}</span>
+                          {flashInfo && (
+                            <span className='placement-change'>
+                              was {flashInfo.from}
+                            </span>
+                          )}
+                        </div>
+                        <div className='placement-card-details'>
+                          <div className='placement-destination'>
+                            <span className='placement-side-label'>Assigned tower</span>
+                            <span
+                              className={`placement-tower-name ${isLocked ? 'text-emerald-300' : 'text-sky-300'}`}
+                            >
+                              {assignment.tower}
+                            </span>
+                            <div className='placement-card-tags'>
+                              <CategoryBadge category={meta.category} />
+                              <StateBadge state={meta.state} />
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className='placement-score'
+                          data-score={assignment.score}
+                          aria-label={`Rating ${assignment.score} out of 5`}
+                        >
+                          <span className='placement-side-label'>Rating</span>
+                          <span className='placement-rating'>
+                            <span>{assignment.score}</span>
+                            <span> / 5</span>
                           </span>
-                          <CategoryBadge category={meta.category} />
-                          <StateBadge state={meta.state} />
+                          <span className='placement-score-meter' aria-hidden='true'>
+                            {[1, 2, 3, 4, 5].map((point) => (
+                              <span
+                                key={point}
+                                className={assignment.score >= point ? 'is-filled' : ''}
+                              />
+                            ))}
+                          </span>
                         </div>
                       </PlainCard>
                     );
@@ -2721,9 +2978,21 @@ function App() {
                       <PlainCard
                         key={u}
                         title={u}
-                        bodyClassName='px-4 pb-4 pt-3'
+                        aside={
+                          currentLock ? (
+                            <span
+                              className='form-guide-lock-indicator'
+                              title={`Locked to ${currentLock}`}
+                            >
+                              <span aria-hidden='true'>🔒</span>
+                              <span>{currentLock}</span>
+                            </span>
+                          ) : null
+                        }
+                        className='form-guide-card'
+                        bodyClassName='form-guide-body'
                       >
-                        <ol className='space-y-2'>
+                        <ol className='form-guide-list'>
                           {items.map((item, rIdx) => {
                             const isThisLocked = currentLock === item.tower;
                             const isFlashRow = !!rowFlash?.rows?.[u]?.includes(
@@ -2734,32 +3003,35 @@ function App() {
                                 key={item.tower}
                                 onClick={() => toggleLock(u, item.tower)}
                                 title={`Click to lock ${item.tower} as #1 for ${u}`}
-                                className={`flex flex-wrap items-center justify-between gap-y-1.5 text-xs px-3 py-2 rounded-xl border transition cursor-pointer ${isFlashRow ? `tie-flash-${rowFlash.id % 2}` : ''} ${
-                                  isThisLocked
-                                    ? 'bg-emerald-950/50 border-emerald-500/70 text-emerald-200 font-bold shadow-sm ring-1 ring-emerald-500/40'
-                                    : rIdx === 0
-                                      ? 'bg-amber-950/30 border-amber-600/50 text-amber-200 font-semibold shadow-sm hover:border-amber-500'
-                                      : item.isAssigned
-                                        ? 'bg-sky-950/40 border-sky-600/50 text-sky-200 font-bold shadow-sm hover:border-sky-500'
-                                        : 'bg-slate-900/60 border-slate-800/60 text-slate-300 hover:bg-slate-800'
-                                }`}
+                                role='button'
+                                tabIndex={0}
+                                aria-pressed={isThisLocked}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    toggleLock(u, item.tower);
+                                  }
+                                }}
+                                className={`form-guide-row ${isThisLocked ? 'is-locked' : ''} ${rIdx === 0 ? 'is-top-choice' : ''} ${item.isAssigned ? 'is-assigned' : ''} ${isFlashRow ? `tie-flash-${rowFlash.id % 2}` : ''}`}
                               >
-                                <div className='flex items-center gap-2'>
+                                <div className='form-guide-rank'>
                                   <span
-                                    className={`font-extrabold w-4 ${isThisLocked ? 'text-emerald-400' : rIdx === 0 ? 'text-amber-400' : 'text-sky-400'}`}
+                                    className={`form-guide-rank-number ${isThisLocked ? 'is-locked' : rIdx === 0 ? 'is-top-choice' : ''}`}
                                   >
                                     #{rIdx + 1}
                                   </span>
-                                  <span>{item.tower}</span>
+                                  <span className='form-guide-tower-name'>
+                                    {item.tower}
+                                  </span>
                                 </div>
-                                <div className='flex items-center gap-2'>
+                                <div className='form-guide-row-details'>
                                   {item.meta?.category && (
                                     <CategoryBadge
                                       category={item.meta.category}
                                     />
                                   )}
                                   <StateBadge state={item.meta?.state} />
-                                  <span className='font-mono text-slate-400 text-[11px]'>
+                                  <span className='form-guide-score'>
                                     {item.score}/5
                                   </span>
                                 </div>
@@ -2938,7 +3210,13 @@ function App() {
                             </td>
                           );
                         })}
-                        <td className='py-3.5 px-4 text-center font-extrabold text-sky-400 text-base'>
+                        <td
+                          className={`py-3.5 px-4 text-center font-extrabold text-base ${
+                            stats.ratingsCount > 0
+                              ? ratingColorClass(Number(stats.avg))
+                              : 'text-slate-500'
+                          }`}
+                        >
                           {stats.ratingsCount > 0 ? stats.avg : '—'}
                         </td>
                       </tr>
