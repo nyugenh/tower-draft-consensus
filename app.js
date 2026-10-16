@@ -542,7 +542,7 @@ function TriviaCard({
       toneClass={s.card}
       lead={<IconBox className={s.icon}>{icon}</IconBox>}
       title={title}
-      bodyClassName='px-4 pb-4 pt-3 flex flex-col gap-3'
+      bodyClassName='mt-3 px-4 pb-4 pt-3 flex flex-col gap-3'
     >
       <p className='text-xs text-slate-400'>{subtitle}</p>
       <div className='bg-slate-900/70 border border-slate-800/80 rounded-xl p-3.5 shadow-inner flex-1'>
@@ -585,6 +585,7 @@ function GroupCard({ kind, rank, theme, label, count, avg, avgLabel, rows }) {
         </span>
       }
       bodyClassName='p-5 space-y-3'
+      className={t.banner}
     >
       <div className='bg-slate-900/80 border border-slate-800/90 rounded-2xl p-4 shadow-inner'>
         <div className='flex items-center justify-between gap-3'>
@@ -2476,7 +2477,7 @@ function App() {
                 )}
                 <button
                   onClick={handleRandomiseSlots}
-                  className='px-4 py-2.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-2xl transition duration-200 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-md'
+                  className='inline-flex h-9 w-32 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-indigo-700/80 bg-indigo-950/80 px-3.5 py-1.5 text-xs font-bold text-indigo-200 shadow-md transition duration-200 hover:bg-indigo-900 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400'
                 >
                   🎲 Randomise
                 </button>
@@ -2597,7 +2598,7 @@ function App() {
                   )}
                   <button
                     onClick={handleRandomiseSlots}
-                    className='px-3.5 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/80 text-indigo-200 text-xs font-bold rounded-xl transition duration-200 cursor-pointer shadow-md whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400'
+                    className='inline-flex h-9 w-32 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-indigo-700/80 bg-indigo-950/80 px-3.5 py-1.5 text-xs font-bold text-indigo-200 shadow-md transition duration-200 hover:bg-indigo-900 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400'
                   >
                     🎲 Randomise
                   </button>
