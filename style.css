@@ -1,9 +1,7 @@
 :root {
   color-scheme: dark;
   --page: #080d17;
-  --page-glow: #0e1a2b;
   --panel: #111a28;
-  --panel-raised: #151f2e;
   --panel-inset: #0c1420;
   --line: rgba(157, 177, 202, 0.14);
   --line-strong: rgba(157, 177, 202, 0.25);
@@ -12,9 +10,6 @@
   --ink-muted: #8292a7;
   --accent: #74c3ef;
   --accent-soft: rgba(116, 195, 239, 0.12);
-  --good: #65c8a2;
-  --warn: #edc36b;
-  --danger: #e98991;
   --radius-xl: 22px;
   --radius-lg: 17px;
   --radius-md: 13px;
@@ -145,6 +140,10 @@ svg {
   box-shadow: none;
 }
 
+#root > div > header > div:last-child > button {
+  border-radius: 9999px;
+}
+
 #root > div > header > div:last-child > span > span {
   width: 8px;
   height: 8px;
@@ -160,11 +159,176 @@ svg {
 }
 
 #controllers-heading {
-  margin: 0 0 12px;
+  margin: 0;
   padding: 0;
+}
+
+.controller-picker-heading p {
   color: var(--ink-muted);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
+}
+
+.app-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-section-heading-copy {
+  min-width: 0;
+}
+
+.app-section-heading-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.app-section-heading-description {
+  margin: 10px 0 0;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.app-section-header-aside {
+  flex: 0 0 auto;
+}
+
+.controller-picker-heading {
+  align-items: center;
+}
+
+.controller-picker-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.controller-picker-count,
+.controller-picker-active {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: rgba(8, 14, 23, 0.48);
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.controller-picker-count {
+  color: var(--ink-muted);
+}
+
+.controller-picker-active {
+  border-color: rgba(116, 195, 239, 0.28);
+  background: rgba(47, 116, 159, 0.12);
+  color: #c4e6fa;
+}
+
+.controller-picker-active.is-empty {
+  border-color: var(--line);
+  background: rgba(8, 14, 23, 0.48);
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.rank-helper-comparison {
+  position: relative;
+  display: grid;
+  width: 100%;
+  max-width: 52rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 48px;
+  margin-inline: auto;
+}
+
+.rank-helper-comparison > :first-child {
+  grid-column: 1;
+}
+
+.rank-helper-comparison > :last-child {
+  grid-column: 2;
+}
+
+.rank-helper-comparison > .app-card {
+  width: 100%;
+}
+
+.rank-helper-vs {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  display: inline-flex;
+  min-width: 36px;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: #111a28;
+  color: var(--ink-muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rank-helper-comparison .app-card-body {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.rank-helper-comparison .app-card.rank-helper-choice {
+  border-color: rgba(157, 177, 202, 0.38);
+  background: linear-gradient(
+    145deg,
+    rgba(27, 43, 62, 0.98),
+    rgba(16, 28, 42, 0.98)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 20px rgba(0, 0, 0, 0.2);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.rank-helper-comparison .app-card.rank-helper-choice:hover {
+  transform: translateY(-2px);
+  border-color: rgba(116, 195, 239, 0.68);
+  background: linear-gradient(
+    145deg,
+    rgba(35, 57, 80, 0.99),
+    rgba(18, 34, 51, 0.99)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 24px rgba(0, 0, 0, 0.25);
+}
+
+.rank-helper-comparison .app-card.rank-helper-choice:focus-visible {
+  outline: 2px solid #74c3ef;
+  outline-offset: 3px;
+}
+
+.rank-helper-choice .app-card-header {
+  min-height: 0;
+  padding: 12px 16px;
 }
 
 #root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed] {
@@ -611,8 +775,8 @@ svg {
 #panel-draft .placement-tower-name {
   min-width: 0;
   max-width: 100%;
-  overflow-wrap: normal;
-  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
   text-wrap: balance;
   color: #9bd8f5;
   font-size: 1.12rem;
@@ -937,6 +1101,14 @@ svg {
   scrollbar-color: #344357 transparent;
 }
 
+.profile-manager-dialog > .app-card-header {
+  padding: 16px 20px 18px;
+}
+
+.profile-manager-dialog > .app-card-body {
+  padding-top: 22px;
+}
+
 .tie-flash-0,
 .tie-flash-1 {
   animation: tie-change-flash 1.5s ease-out;
@@ -972,6 +1144,48 @@ svg {
   #root > div > section[aria-labelledby="controllers-heading"] {
     padding: 14px;
     border-radius: var(--radius-lg);
+  }
+
+  .controller-picker-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .app-section-header {
+    flex-direction: column;
+  }
+
+  .app-section-header-aside {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .controller-picker-summary {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .rank-helper-comparison {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .rank-helper-comparison > :first-child,
+  .rank-helper-comparison > :last-child {
+    grid-column: 1;
+  }
+
+  .rank-helper-comparison > :last-child {
+    grid-row: 3;
+  }
+
+  .rank-helper-vs {
+    position: static;
+    grid-row: 2;
+    justify-self: center;
+    transform: none;
+    min-height: 28px;
+    min-width: 28px;
   }
 
   #root > div > nav {
@@ -1073,10 +1287,6 @@ svg {
   flex: 0 1 auto;
 }
 
-#root .app-themed-card .app-card-header {
-  background: linear-gradient(100deg, rgba(116, 195, 239, 0.045), rgba(255, 255, 255, 0.012));
-}
-
 #root .app-card-body,
 #root .app-themed-card .app-card-body {
   background: transparent;
@@ -1102,4 +1312,53 @@ svg {
 #root .app-card > .form-guide-body,
 #root .app-card > .placement-card-body {
   background: transparent;
+}
+
+.app-card,
+.app-themed-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    145deg,
+    rgba(18, 29, 43, 0.96),
+    rgba(10, 17, 27, 0.98)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.app-card-header,
+.app-themed-card .app-card-header {
+  min-height: 52px;
+  align-content: center;
+  border-bottom: 1px solid rgba(157, 177, 202, 0.1);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.app-card-body,
+.app-themed-card .app-card-body {
+  background: transparent;
+}
+
+#root button {
+  border-radius: 12px;
+  transition-duration: 160ms;
+}
+
+#root input:not([type="checkbox"]),
+#root select,
+#root textarea,
+.app-card input:not([type="checkbox"]),
+.app-card select,
+.app-card textarea {
+  border-color: var(--line-strong);
+  border-radius: var(--radius-md);
+}
+
+#root > div > main > section {
+  border-color: var(--line);
+  border-radius: var(--radius-xl);
+  background: rgba(15, 24, 36, 0.9);
+  box-shadow: var(--shadow-panel);
 }
