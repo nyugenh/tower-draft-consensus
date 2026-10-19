@@ -202,6 +202,10 @@ svg {
   align-items: center;
 }
 
+.controller-picker-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+
 .controller-picker-summary {
   display: flex;
   flex-wrap: wrap;
@@ -1361,4 +1365,956 @@ svg {
   border-radius: var(--radius-xl);
   background: rgba(15, 24, 36, 0.9);
   box-shadow: var(--shadow-panel);
+}
+
+:root {
+  --page: #080d17;
+  --panel: #121d2b;
+  --panel-inset: #0c1623;
+  --card-surface: #17283a;
+  --card-raised: #21364b;
+  --card-inset: #101c29;
+  --line: #536579;
+  --line-strong: #8093a8;
+  --ink: #f5f8fc;
+  --ink-soft: #d7e1ec;
+  --ink-muted: #bdcad9;
+  --accent: #8bd5ff;
+  --accent-soft: rgba(80, 166, 214, 0.2);
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: auto;
+}
+
+#root > div {
+  max-width: 1440px;
+  padding-top: clamp(16px, 3vw, 36px);
+}
+
+#root > div > header,
+#root > div > section[aria-labelledby="controllers-heading"],
+#root > div > main > section,
+#panel-rate > div:first-child,
+#panel-hot-to-not > div:first-child {
+  border: 2px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+#root > div > header {
+  border-top: 5px solid var(--accent);
+}
+
+#root > div > header h1 {
+  color: #f5f8fc;
+  letter-spacing: -0.02em;
+}
+
+.app-section-heading-title,
+#panel-rate h2,
+#panel-hot-to-not h2,
+#panel-trivia h2,
+#panel-breakdown h2,
+#panel-draft h2,
+#panel-draft h3 {
+  color: #f5f8fc;
+}
+
+.app-section-heading-description,
+.controller-picker-heading p,
+#panel-rate p,
+#panel-hot-to-not p,
+#panel-trivia p,
+#panel-breakdown p,
+#panel-draft p {
+  color: #c5d1df;
+}
+
+#root .app-card,
+#root .app-themed-card,
+.app-card,
+.app-themed-card {
+  border: 2px solid #60748a;
+  border-radius: 15px;
+  background: var(--card-surface);
+  color: var(--ink);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
+}
+
+#root .app-card-header,
+#root .app-themed-card .app-card-header,
+.app-card-header,
+.app-themed-card .app-card-header {
+  min-height: 56px;
+  border-bottom: 2px solid #53677c;
+  background: var(--card-raised);
+}
+
+#root .app-card-header > span.font-bold,
+#root .app-card-title {
+  color: #f5f8fc;
+}
+
+.app-themed-card[data-theme],
+.app-card[data-theme] {
+  border-top: 6px solid var(--card-accent, var(--accent));
+}
+
+[data-theme="slate"] { --card-accent: #d2deeb; }
+[data-theme="yellow"],
+[data-theme="amber"] { --card-accent: #ffe17b; }
+[data-theme="red"],
+[data-theme="rose"] { --card-accent: #ff9b9b; }
+[data-theme="pink"],
+[data-theme="fuchsia"] { --card-accent: #ffafe7; }
+[data-theme="cyan"],
+[data-theme="teal"] { --card-accent: #80f0e8; }
+[data-theme="violet"],
+[data-theme="purple"] { --card-accent: #d0b5ff; }
+[data-theme="indigo"] { --card-accent: #b8c3ff; }
+[data-theme="sky"] { --card-accent: #8bd5ff; }
+[data-theme="emerald"] { --card-accent: #8ce7bd; }
+[data-theme="orange"] { --card-accent: #ffc18b; }
+
+#root .app-card[role="button"],
+#root .app-themed-card,
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed],
+#panel-rate .grid > .app-card,
+#panel-draft .assigned-placement-card,
+#panel-draft .form-guide-card {
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+#root .app-card[role="button"]:hover,
+#root .app-themed-card:hover,
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed]:hover,
+#panel-rate .grid > .app-card:hover,
+#panel-draft .assigned-placement-card:hover,
+#panel-draft .form-guide-card:hover {
+  transform: none;
+  border-color: #b1c7dc;
+  box-shadow: 0 0 0 2px rgba(177, 199, 220, 0.24);
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="true"],
+#panel-rate button[aria-label^="Rate "][aria-pressed="true"],
+#panel-rate > div:first-child button[aria-pressed="true"],
+#panel-hot-to-not [role="group"] button[aria-pressed="true"],
+#root > div > nav [role="tab"][aria-selected="true"] {
+  border: 2px solid #c0e9ff;
+  box-shadow: inset 0 0 0 2px #0b1723, 0 0 0 1px #c0e9ff;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="true"] {
+  background: #1c3b51;
+  border-left: 6px solid #c0e9ff;
+}
+
+#root > div > nav {
+  border: 2px solid var(--line);
+  background: #101a27;
+  backdrop-filter: none;
+}
+
+#root > div > nav [role="tab"] {
+  min-height: 48px;
+  border: 2px solid transparent;
+  color: #d3deea;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+#root > div > nav [role="tab"]:hover:not([aria-selected="true"]) {
+  border-color: #8398ad;
+  background: #1b2b3d;
+  color: #fff;
+}
+
+#root > div > nav [role="tab"][aria-selected="true"] {
+  border-color: #c0e9ff;
+  background: #194563;
+  color: #fff;
+}
+
+#root :where(button, input, select, textarea, a, summary, [role="button"], [role="tab"], [tabindex]):focus-visible {
+  outline: 3px solid #ffe17b !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 2px #080d17 !important;
+}
+
+#root :where(button, [role="button"], [role="tab"]) {
+  min-height: 44px;
+}
+
+#root :where(input:not([type="checkbox"]), select, textarea) {
+  min-height: 46px;
+  border: 2px solid var(--line-strong);
+  background-color: #0c1623;
+  color: #f5f8fc;
+}
+
+#root .text-xs,
+#root [class~="text-[9px]"],
+#root [class~="text-[10px]"],
+#root [class~="text-[11px]"] {
+  font-size: 0.8125rem !important;
+  line-height: 1.45;
+}
+
+#root .text-slate-400,
+#root .text-slate-500,
+#root .text-slate-600,
+#root .text-gray-400,
+#root .text-gray-500 {
+  color: #c5d1df !important;
+}
+
+#root input::placeholder,
+#root textarea::placeholder {
+  color: #bdcad9;
+  opacity: 1;
+}
+
+#root .controller-picker-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 12px;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed] {
+  min-height: 88px;
+  padding: 14px;
+  border-width: 2px;
+  border-color: #60748a;
+  border-radius: 14px;
+  background: #17283a;
+  box-shadow: none;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="false"]:hover {
+  background: #20364b;
+}
+
+#panel-rate .grid > .app-card {
+  border-color: #60748a;
+  background: #17283a;
+  box-shadow: none;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed] {
+  width: 44px;
+  height: 44px;
+  border: 2px solid #73879b;
+  border-radius: 10px;
+  background: #0c1623;
+  color: #f0f5fa;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed="true"] {
+  background: #17618a;
+  color: #fff;
+  font-weight: 900;
+}
+
+#panel-draft .assigned-placement-card {
+  min-height: 140px;
+  border: 2px solid #60748a;
+  background: #17283a;
+}
+
+#panel-draft .assigned-placement-card.is-locked {
+  border: 3px solid #8ce7bd;
+  background: #17352f;
+}
+
+#panel-draft .placement-side-label,
+#panel-draft .placement-score,
+#panel-draft .placement-rating,
+#panel-draft .form-guide-row,
+#panel-draft .form-guide-score {
+  color: #d3deea;
+}
+
+#panel-draft .placement-destination,
+#panel-draft .form-guide-row {
+  border: 1px solid #60748a;
+  background: #0c1623;
+}
+
+#panel-draft .form-guide-row {
+  min-height: 48px;
+}
+
+#panel-draft .form-guide-tower-name {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#panel-hot-to-not input,
+#panel-rate input {
+  border: 2px solid var(--line-strong);
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 12px;
+  left: 12px;
+  transform: translateY(calc(-100% - 16px));
+  padding: 10px 16px;
+  border: 2px solid #ffe17b;
+  border-radius: 10px;
+  background: #080d17;
+  color: #fff;
+  font-weight: 800;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: #a9bbcf;
+    --line-strong: #d7e4f0;
+    --ink-muted: #f0f5fa;
+  }
+
+  #root .app-card,
+  #root .app-themed-card,
+  #root > div > header,
+  #root > div > nav {
+    border-width: 3px;
+  }
+}
+
+@media (forced-colors: active) {
+  #root :where(button, input, select, textarea, a, summary, [role="button"], [role="tab"], [tabindex]):focus-visible,
+  .skip-link:focus {
+    outline: 3px solid Highlight !important;
+    box-shadow: none !important;
+  }
+
+  #root :where(button, input, select, textarea, [role="button"], [role="tab"]) {
+    border: 1px solid ButtonText;
+  }
+}
+
+:root {
+  --panel: #111a28;
+  --panel-inset: #0c1420;
+  --card-surface: #142233;
+  --card-raised: #192a3d;
+  --card-inset: #0d1724;
+  --line: #35485d;
+  --line-strong: #52677e;
+  --ink: #edf3fa;
+  --ink-soft: #c5d1df;
+  --ink-muted: #aebdce;
+  --accent: #82c9f1;
+  --accent-soft: rgba(116, 195, 239, 0.12);
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(58, 105, 148, 0.12), transparent 52%),
+    var(--page);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root > div > header,
+#root > div > section[aria-labelledby="controllers-heading"],
+#root > div > main > section,
+#panel-rate > div:first-child,
+#panel-hot-to-not > div:first-child {
+  border-width: 1px;
+  border-color: #35485d;
+  background: #111a28;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+#root > div > header {
+  border-top-width: 3px;
+  border-top-color: #5798bf;
+}
+
+#root > div > header h1,
+.app-section-heading-title,
+#panel-rate h2,
+#panel-hot-to-not h2,
+#panel-trivia h2,
+#panel-breakdown h2,
+#panel-draft h2,
+#panel-draft h3 {
+  color: #eaf2fa;
+}
+
+.app-section-heading-description,
+.controller-picker-heading p,
+#panel-rate p,
+#panel-hot-to-not p,
+#panel-trivia p,
+#panel-breakdown p,
+#panel-draft p {
+  color: #aebdce;
+}
+
+#root .app-card,
+#root .app-themed-card,
+.app-card,
+.app-themed-card {
+  border-width: 1px;
+  border-color: #3a5067;
+  background: #142233;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+#root .app-card-header,
+#root .app-themed-card .app-card-header,
+.app-card-header,
+.app-themed-card .app-card-header {
+  border-bottom-width: 1px;
+  border-bottom-color: #354a60;
+  background: #192a3d;
+}
+
+.app-themed-card[data-theme],
+.app-card[data-theme] {
+  border-top-width: 3px;
+}
+
+[data-theme="slate"] { --card-accent: #9cacc0; }
+[data-theme="yellow"],
+[data-theme="amber"] { --card-accent: #d6b857; }
+[data-theme="red"],
+[data-theme="rose"] { --card-accent: #d8787e; }
+[data-theme="pink"],
+[data-theme="fuchsia"] { --card-accent: #d67bb7; }
+[data-theme="cyan"],
+[data-theme="teal"] { --card-accent: #5dbeb7; }
+[data-theme="violet"],
+[data-theme="purple"] { --card-accent: #a48ad6; }
+[data-theme="indigo"] { --card-accent: #8d9ddd; }
+[data-theme="sky"] { --card-accent: #6eb4de; }
+[data-theme="emerald"] { --card-accent: #64b990; }
+[data-theme="orange"] { --card-accent: #d5945e; }
+
+#root .app-card[role="button"]:hover,
+#root .app-themed-card:hover,
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed]:hover,
+#panel-rate .grid > .app-card:hover,
+#panel-draft .assigned-placement-card:hover,
+#panel-draft .form-guide-card:hover {
+  border-color: #7490aa;
+  box-shadow: 0 0 0 1px rgba(130, 170, 204, 0.18);
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="true"],
+#panel-rate button[aria-label^="Rate "][aria-pressed="true"],
+#panel-rate > div:first-child button[aria-pressed="true"],
+#panel-hot-to-not [role="group"] button[aria-pressed="true"],
+#root > div > nav [role="tab"][aria-selected="true"] {
+  border: 2px solid #86bfe0;
+  box-shadow: inset 0 0 0 1px #101a27;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="true"] {
+  border-left-width: 4px;
+  border-left-color: #86bfe0;
+  background: #183047;
+}
+
+#root > div > nav {
+  border-width: 1px;
+  border-color: #35485d;
+  background: rgba(12, 19, 29, 0.96);
+}
+
+#root > div > nav [role="tab"] {
+  border-width: 1px;
+  color: #bdcad9;
+}
+
+#root > div > nav [role="tab"]:hover:not([aria-selected="true"]) {
+  border-color: #536a80;
+  background: #1a2a3b;
+  color: #edf3fa;
+}
+
+#root > div > nav [role="tab"][aria-selected="true"] {
+  border-color: #6596b5;
+  background: #1b3b52;
+  color: #edf7fd;
+}
+
+#root :where(button, input, select, textarea, a, summary, [role="button"], [role="tab"], [tabindex]):focus-visible {
+  outline-color: #a6d7f4 !important;
+  box-shadow: 0 0 0 2px #080d17 !important;
+}
+
+#root :where(input:not([type="checkbox"]), select, textarea) {
+  border-width: 1px;
+  border-color: #52677e;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="false"] {
+  border-width: 1px;
+  border-color: #40556a;
+  background: #142233;
+  box-shadow: none;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="true"] {
+  border-color: #6596b5;
+  border-left-width: 4px;
+  border-left-color: #86bfe0;
+  background: #183047;
+  box-shadow: inset 0 0 0 1px #101a27;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="false"]:hover {
+  background: #1a2b3e;
+}
+
+#panel-rate .grid > .app-card {
+  border-color: #3a5067;
+  background: #142233;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed] {
+  border-width: 1px;
+  border-color: #52677e;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed="true"] {
+  background: #397da4;
+}
+
+#panel-draft .assigned-placement-card {
+  border-width: 1px;
+  border-color: #3a5067;
+  background: #142233;
+}
+
+#panel-draft .assigned-placement-card.is-locked {
+  border-width: 2px;
+  border-color: #57aa87;
+  background: #142b2a;
+}
+
+#panel-draft .placement-destination,
+#panel-draft .form-guide-row {
+  border-color: #40556a;
+  background: #0d1724;
+}
+
+.skip-link {
+  border-color: #86bfe0;
+}
+
+:root {
+  --line: #2a394a;
+  --line-strong: #43566b;
+}
+
+#root > div > header,
+#root > div > section[aria-labelledby="controllers-heading"],
+#root > div > nav,
+#root > div > main > section,
+#panel-rate > div:first-child,
+#panel-hot-to-not > div:first-child {
+  border-color: #2a394a;
+}
+
+#root .app-card,
+#root .app-themed-card,
+.app-card,
+.app-themed-card,
+#panel-rate .grid > .app-card,
+#panel-draft .assigned-placement-card,
+#panel-draft .form-guide-card {
+  border-color: #304256;
+}
+
+#root .app-card-header,
+#root .app-themed-card .app-card-header,
+.app-card-header,
+.app-themed-card .app-card-header {
+  border-bottom-color: #2a3a4c;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="false"] {
+  border-color: #304256;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed],
+#root :where(input:not([type="checkbox"]), select, textarea) {
+  border-color: #43566b;
+}
+
+.fixed[role="dialog"] {
+  background-color: rgba(3, 7, 13, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+.profile-manager-dialog[role="dialog"],
+.fixed[role="dialog"] > .app-card {
+  border: 1px solid #3a4c60;
+  border-radius: 17px;
+  background: #111a28;
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.55);
+}
+
+.fixed[role="dialog"] .app-card-header,
+.profile-manager-dialog[role="dialog"] > .app-card-header {
+  min-height: 64px;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid #2e4054;
+  background: #192a3d;
+}
+
+[role="dialog"] .app-card-body {
+  padding-top: 24px !important;
+  background: #111a28;
+}
+
+[role="dialog"] .app-card-body > :first-child {
+  margin-top: 0;
+}
+
+.profile-manager-dialog[role="dialog"] > .app-card-header {
+  padding-bottom: 18px !important;
+}
+
+.profile-manager-dialog[role="dialog"] > .app-card-body {
+  padding-top: 30px !important;
+}
+
+[role="dialog"] .app-card :where(input:not([type="checkbox"]), select, textarea) {
+  border-color: #35485d;
+  background-color: #0c1420;
+}
+
+[role="dialog"] .app-card :where(button) {
+  box-shadow: none;
+}
+
+[role="dialog"] .app-card :where(button[class*="rose-"]) {
+  border-color: #604047;
+  background-color: #482a31;
+  color: #f2d7da;
+}
+
+[role="dialog"] .app-card :where(button[class*="rose-"]):hover {
+  background-color: #59333b;
+}
+
+.rank-helper-comparison .app-card,
+.profile-manager-dialog .app-card {
+  border-color: #304256;
+}
+
+:root {
+  --panel: #0e1723;
+  --panel-inset: #09121d;
+  --card-surface: #111d2b;
+  --card-raised: #172536;
+  --card-inset: #0b1520;
+  --line: #202d3b;
+  --line-strong: #354657;
+  --ink: #e5edf6;
+  --ink-soft: #c1ccda;
+  --ink-muted: #a8b6c6;
+  --accent: #75b4d8;
+  --accent-soft: rgba(91, 145, 180, 0.13);
+}
+
+body {
+  background: var(--page);
+}
+
+#root > div > header,
+#root > div > section[aria-labelledby="controllers-heading"],
+#root > div > nav,
+#root > div > main > section,
+#panel-rate > div:first-child,
+#panel-hot-to-not > div:first-child {
+  border-color: #202d3b;
+  background: #0e1723;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+}
+
+#root > div > header {
+  border-top-color: #385b73;
+}
+
+#root .app-card,
+#root .app-themed-card,
+.app-card,
+.app-themed-card,
+#panel-rate .grid > .app-card,
+#panel-draft .assigned-placement-card,
+#panel-draft .form-guide-card {
+  border-color: #263749;
+  background: #111d2b;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+#root .app-card-header,
+#root .app-themed-card .app-card-header,
+.app-card-header,
+.app-themed-card .app-card-header,
+.fixed[role="dialog"] .app-card-header,
+.profile-manager-dialog[role="dialog"] > .app-card-header {
+  border-bottom-color: #223243;
+  background: #172536;
+}
+
+.app-themed-card[data-theme],
+.app-card[data-theme] {
+  border-top-color: color-mix(in srgb, var(--card-accent, var(--accent)) 70%, #111d2b);
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="false"],
+#panel-rate .grid > .app-card,
+#panel-draft .assigned-placement-card {
+  border-color: #263749;
+  background: #111d2b;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="false"]:hover,
+#panel-draft .assigned-placement-card:hover,
+#root .app-card[role="button"]:hover,
+#root .app-themed-card:hover {
+  border-color: #3e566c;
+  box-shadow: 0 0 0 1px rgba(98, 133, 161, 0.14);
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="true"] {
+  border-color: #45657d;
+  border-left-color: #75b4d8;
+  background: #172b3c;
+  box-shadow: inset 0 0 0 1px #0e1723;
+}
+
+#root > div > nav {
+  background: #0b1420;
+}
+
+#root > div > nav [role="tab"] {
+  color: #aebccd;
+}
+
+#root > div > nav [role="tab"]:hover:not([aria-selected="true"]) {
+  border-color: #35485b;
+  background: #142233;
+}
+
+#root > div > nav [role="tab"][aria-selected="true"] {
+  border-color: #45657d;
+  background: #172f42;
+  color: #e3eff8;
+  box-shadow: inset 0 0 0 1px #0e1723;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed] {
+  border-color: #35485b;
+  background: #0b1520;
+  color: #dce6f0;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed="true"] {
+  border-color: #527b99;
+  background: #2b607e;
+  color: #f3f8fc;
+  box-shadow: inset 0 0 0 1px #0e1723;
+}
+
+#panel-rate > div:first-child button[aria-pressed="true"],
+#panel-hot-to-not [role="group"] button[aria-pressed="true"] {
+  border-color: #45657d;
+  background: #172f42;
+  color: #e3eff8;
+  box-shadow: inset 0 0 0 1px #0e1723;
+}
+
+#panel-draft .assigned-placement-card.is-locked {
+  border-color: #40725f;
+  background: #122722;
+}
+
+#panel-draft .placement-destination,
+#panel-draft .form-guide-row {
+  border-color: #293a4c;
+  background: #0b1520;
+}
+
+#root :where(button, input, select, textarea, a, summary, [role="button"], [role="tab"], [tabindex]):focus-visible {
+  outline: 2px solid #82b8d8 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px #080d17 !important;
+}
+
+[role="dialog"] > .app-card,
+.profile-manager-dialog[role="dialog"] {
+  border-color: #2c3d50;
+  background: #0e1723;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
+}
+
+[role="dialog"] .app-card-body {
+  background: #0e1723;
+}
+
+[role="dialog"] .app-card :where(input:not([type="checkbox"]), select, textarea) {
+  border-color: #354657;
+  background-color: #09121d;
+}
+
+[role="dialog"] .app-card {
+  border-color: #263749;
+}
+
+[role="dialog"] .app-card .app-card-header {
+  border-bottom-color: #202f40;
+  background: #152333;
+}
+
+[role="dialog"] .app-card-body {
+  background: #0e1723;
+}
+
+[role="dialog"] .app-card :where(input:not([type="checkbox"]), select, textarea) {
+  border-color: #2c3d50;
+}
+
+.fixed[role="dialog"] button[class~="bg-sky-600"],
+.fixed[role="dialog"] button[class~="bg-sky-500"] {
+  border: 1px solid #45657d;
+  background: #23445b;
+  color: #e2edf5;
+  box-shadow: none;
+}
+
+.fixed[role="dialog"] button[class~="bg-sky-600"]:hover,
+.fixed[role="dialog"] button[class~="bg-sky-500"]:hover {
+  background: #2b5068;
+}
+
+.fixed[role="dialog"] button[aria-pressed="true"],
+.fixed[role="dialog"] button[aria-selected="true"] {
+  border-color: #54728a;
+  background-color: #1a3042;
+  color: #e4edf5;
+  box-shadow: inset 0 0 0 1px #0e1723;
+}
+
+.fixed[role="dialog"] button[class*="border-sky-500"] {
+  border-color: #54728a;
+}
+
+.fixed[role="dialog"] button[class*="bg-sky-950"] {
+  background-color: #172a3a;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed="true"] {
+  border-color: #45657d;
+  background: #284b62;
+}
+
+#panel-draft .assigned-placement-card.is-locked {
+  border-color: #365e50;
+}
+
+.skip-link {
+  border-color: #527b98;
+}
+
+:root {
+  --panel: #0c1420;
+  --panel-inset: #080f19;
+  --card-surface: #101a27;
+  --card-raised: #142131;
+  --card-inset: #09121c;
+  --accent: #6a9fbe;
+}
+
+#root > div > header,
+#root > div > section[aria-labelledby="controllers-heading"],
+#root > div > nav,
+#root > div > main > section,
+#panel-rate > div:first-child,
+#panel-hot-to-not > div:first-child,
+[role="dialog"] > .app-card,
+.profile-manager-dialog[role="dialog"] {
+  background-color: #0c1420;
+}
+
+#root .app-card,
+#root .app-themed-card,
+.app-card,
+.app-themed-card,
+#panel-rate .grid > .app-card,
+#panel-draft .assigned-placement-card {
+  background-color: #101a27;
+}
+
+#root .app-card-header,
+#root .app-themed-card .app-card-header,
+.app-card-header,
+.app-themed-card .app-card-header,
+.fixed[role="dialog"] .app-card-header,
+.profile-manager-dialog[role="dialog"] > .app-card-header {
+  background-color: #142131;
+}
+
+#root :where(button, input, select, textarea, a, summary, [role="button"], [role="tab"], [tabindex]):focus-visible {
+  outline: 2px solid #6698b6 !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+#root > div > header {
+  border-top-color: #304e64;
+}
+
+#root > div > section[aria-labelledby="controllers-heading"] button[aria-pressed="true"] {
+  border-color: #3c596f;
+  border-left-color: #6698b6;
+  background-color: #142638;
+}
+
+#panel-rate button[aria-label^="Rate "][aria-pressed="true"] {
+  border-color: #3b5a71;
+  background-color: #24445a;
+}
+
+#panel-rate > div:first-child button[aria-pressed="true"],
+#panel-hot-to-not [role="group"] button[aria-pressed="true"],
+#root > div > nav [role="tab"][aria-selected="true"] {
+  border-color: #3c596f;
+  background-color: #142638;
+}
+
+[role="dialog"] .app-card-body {
+  background-color: #0c1420;
+}
+
+.fixed[role="dialog"] button[class~="bg-sky-600"],
+.fixed[role="dialog"] button[class~="bg-sky-500"] {
+  border-color: #3c596f;
+  background-color: #1c384b;
+}
+
+.fixed[role="dialog"] button[class~="bg-sky-600"]:hover,
+.fixed[role="dialog"] button[class~="bg-sky-500"]:hover {
+  background-color: #24465c;
 }

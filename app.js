@@ -347,6 +347,7 @@ function ThemedCard({
   return (
     <div
       {...rest}
+      data-theme={theme}
       className={`app-themed-card relative rounded-2xl flex flex-col shadow-xl overflow-hidden border min-w-0 transition-all duration-200 ${t.border} ${flashClass} ${className}`}
     >
       <div className='app-card-header px-4 py-3.5 flex flex-wrap items-center gap-3'>
@@ -550,6 +551,7 @@ function TriviaCard({
   const s = TRIVIA_SOFT[tint];
   return (
     <PlainCard
+      data-theme={tint}
       toneClass={s.card}
       lead={<IconBox className={s.icon}>{icon}</IconBox>}
       title={title}
@@ -3476,8 +3478,36 @@ function App() {
     return 'bg-slate-900/60 text-slate-400 border border-slate-800/80';
   };
 
+  const handleTabKeyDown = (event) => {
+    const tabs = Array.from(
+      event.currentTarget.parentElement.querySelectorAll('[role="tab"]'),
+    );
+    const currentIndex = tabs.indexOf(event.currentTarget);
+    let nextIndex = currentIndex;
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft')
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    tabs[nextIndex].focus();
+    tabs[nextIndex].click();
+  };
+
   return (
     <div className='max-w-7xl mx-auto p-4 md:p-8 font-sans text-slate-100 antialiased relative min-h-screen bg-slate-950 flex flex-col'>
+      <a
+        className='skip-link'
+        href='#panel-rate'
+        onClick={(event) => {
+          event.preventDefault();
+          document.querySelector('[role="tabpanel"]')?.focus();
+        }}
+      >
+        Skip to main content
+      </a>
       {/* Rating save status */}
       <div
         role='status'
@@ -3592,7 +3622,7 @@ function App() {
             Tower ratings and team draft planning
           </p>
         </div>
-        <div className='flex flex-wrap items-center gap-2.5' aria-live='polite'>
+        <div className='flex flex-wrap items-center gap-2.5'>
           <button
             type='button'
             onClick={() => setShowProfileModal(true)}
@@ -3605,14 +3635,26 @@ function App() {
             <span className='max-w-40 truncate'>
               {activeProfile?.name || 'Profile'}
             </span>
-            <span
+            <svg
               aria-hidden='true'
-              className='shrink-0 text-[10px] text-slate-500'
+              className='h-3.5 w-3.5 shrink-0 text-slate-400'
+              viewBox='0 0 16 16'
+              fill='none'
             >
-              ⌄
-            </span>
+              <path
+                d='m4 6 4 4 4-4'
+                stroke='currentColor'
+                strokeWidth='1.75'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+              />
+            </svg>
           </button>
-          <span className='flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs font-bold text-slate-300 shadow-inner'>
+          <span
+            role='status'
+            aria-live='polite'
+            className='flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs font-bold text-slate-300 shadow-inner'
+          >
             <span
               className={`h-2 w-2 rounded-full ${syncStatus === 'Synced' ? 'bg-emerald-400' : syncStatus === 'Offline' || syncStatus === 'Sync Error' ? 'bg-rose-400' : 'bg-amber-400'}`}
             ></span>
@@ -3666,7 +3708,7 @@ function App() {
             </button>
           </div>
         ) : (
-          <div className='controller-picker-grid mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'>
+          <div className='controller-picker-grid mt-5 grid gap-2'>
             {activeProfileControllers.map((u) => {
               const ratedCount = getRatedCount(u);
               const pct = Math.round((ratedCount / ALL_TOWERS.length) * 100);
@@ -3708,6 +3750,11 @@ function App() {
                   </div>
                   <div className='mt-3 h-1 w-full overflow-hidden rounded-full bg-slate-800'>
                     <div
+                      role='progressbar'
+                      aria-label={`${ratedCount} of ${ALL_TOWERS.length} towers rated`}
+                      aria-valuemin={0}
+                      aria-valuemax={ALL_TOWERS.length}
+                      aria-valuenow={ratedCount}
                       className={`h-full rounded-full transition-all duration-300 ${isComplete ? 'bg-emerald-400' : 'bg-sky-500'}`}
                       style={{ width: `${pct}%` }}
                     ></div>
@@ -4152,6 +4199,8 @@ function App() {
             id='tab-rate'
             aria-selected={activeTab === 'rate'}
             aria-controls='panel-rate'
+            tabIndex={activeTab === 'rate' ? 0 : -1}
+            onKeyDown={handleTabKeyDown}
             onClick={() => setActiveTab('rate')}
             className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'rate'
@@ -4171,6 +4220,8 @@ function App() {
             id='tab-draft'
             aria-selected={activeTab === 'draft'}
             aria-controls='panel-draft'
+            tabIndex={activeTab === 'draft' ? 0 : -1}
+            onKeyDown={handleTabKeyDown}
             onClick={() => setActiveTab('draft')}
             className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'draft'
@@ -4185,6 +4236,8 @@ function App() {
             id='tab-hot-to-not'
             aria-selected={activeTab === 'hot-to-not'}
             aria-controls='panel-hot-to-not'
+            tabIndex={activeTab === 'hot-to-not' ? 0 : -1}
+            onKeyDown={handleTabKeyDown}
             onClick={() => setActiveTab('hot-to-not')}
             className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'hot-to-not'
@@ -4199,6 +4252,8 @@ function App() {
             id='tab-trivia'
             aria-selected={activeTab === 'trivia'}
             aria-controls='panel-trivia'
+            tabIndex={activeTab === 'trivia' ? 0 : -1}
+            onKeyDown={handleTabKeyDown}
             onClick={() => setActiveTab('trivia')}
             className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'trivia'
@@ -4213,6 +4268,8 @@ function App() {
             id='tab-breakdown'
             aria-selected={activeTab === 'breakdown'}
             aria-controls='panel-breakdown'
+            tabIndex={activeTab === 'breakdown' ? 0 : -1}
+            onKeyDown={handleTabKeyDown}
             onClick={() => setActiveTab('breakdown')}
             className={`flex-1 min-w-[120px] px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer box-border ${
               activeTab === 'breakdown'
@@ -4231,6 +4288,7 @@ function App() {
           id='panel-rate'
           role='tabpanel'
           aria-labelledby='tab-rate'
+          tabIndex={-1}
           className='space-y-6 flex-1'
         >
           {/* Sticky Filter & Search Bar */}
@@ -4423,6 +4481,7 @@ function App() {
           id='panel-draft'
           role='tabpanel'
           aria-labelledby='tab-draft'
+          tabIndex={-1}
           className='space-y-6 flex-1'
         >
           <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl'>
@@ -4646,6 +4705,7 @@ function App() {
                         role='button'
                         tabIndex={0}
                         aria-pressed={isLocked}
+                        aria-label={`${isLocked ? 'Unlock' : 'Lock'} ${assignment.tower} as the first choice for ${u}`}
                         tooltip={`${isLocked ? 'Unlock' : 'Lock'} ${assignment.tower} as #1 for ${u}`}
                         onClick={() =>
                           assignment.tower && toggleLock(u, assignment.tower)
@@ -4812,6 +4872,7 @@ function App() {
           id='panel-hot-to-not'
           role='tabpanel'
           aria-labelledby='tab-hot-to-not'
+          tabIndex={-1}
           className='space-y-6 flex-1 flex flex-col'
         >
           <div className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl flex-1 flex flex-col'>
@@ -4992,6 +5053,7 @@ function App() {
           id='panel-trivia'
           role='tabpanel'
           aria-labelledby='tab-trivia'
+          tabIndex={-1}
           className='space-y-8 flex-1'
         >
           <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-8'>
@@ -5028,6 +5090,7 @@ function App() {
           id='panel-breakdown'
           role='tabpanel'
           aria-labelledby='tab-breakdown'
+          tabIndex={-1}
           className='space-y-6 flex-1'
         >
           <section className='bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-12'>
