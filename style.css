@@ -1550,6 +1550,11 @@ body {
   box-shadow: 0 0 0 2px #080d17 !important;
 }
 
+#root header button[aria-label="Manage profiles"] {
+  min-height: 0 !important;
+  padding: 8px 12px !important;
+}
+
 #root :where(button, [role="button"], [role="tab"]) {
   min-height: 44px;
 }
@@ -1581,6 +1586,11 @@ body {
 #root textarea::placeholder {
   color: #bdcad9;
   opacity: 1;
+}
+
+#root .controller-picker-grid button > div > span > span.text-slate-500 {
+  color: #7f8fa3 !important;
+  font-size: 0.75rem !important;
 }
 
 #root .controller-picker-grid {

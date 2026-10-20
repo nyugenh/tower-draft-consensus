@@ -3627,9 +3627,9 @@ function App() {
             type='button'
             onClick={() => setShowProfileModal(true)}
             aria-label='Manage profiles'
-            className='inline-flex h-[34px] min-w-0 items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 text-xs font-bold text-slate-300 transition hover:border-sky-700 hover:bg-slate-950'
+            className='inline-flex min-w-0 items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs shadow-inner font-bold text-slate-300 transition hover:border-sky-700 hover:bg-slate-950'
           >
-            <span aria-hidden='true' className='shrink-0 text-sm'>
+            <span aria-hidden='true' className='shrink-0 text-xs leading-none'>
               👥
             </span>
             <span className='max-w-40 truncate'>
@@ -3768,30 +3768,29 @@ function App() {
 
       {showProfileModal &&
         ReactDOM.createPortal(
-          <div className='fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/85 p-4 backdrop-blur-md'>
+          <div
+            className='fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 p-4 backdrop-blur-md'
+            role='dialog'
+            aria-modal='true'
+            aria-labelledby='profile-manager-title'
+            aria-busy={profileSaving}
+          >
             <PlainCard
-              role='dialog'
-              aria-modal='true'
-              aria-labelledby='profile-manager-title'
-              aria-busy={profileSaving}
-              className='profile-manager-dialog my-auto max-h-[92vh] w-full max-w-5xl overflow-y-auto bg-slate-900 shadow-2xl'
-              lead={
-                <IconBox className='bg-sky-950/70 border-sky-800/70 text-sky-200'>
-                  👥
-                </IconBox>
-              }
+              className='profile-manager-dialog mx-auto my-6 w-full max-w-5xl bg-slate-900 shadow-2xl'
+              lead={<IconBox>👥</IconBox>}
               title={<span id='profile-manager-title'>Profile Manager</span>}
               aside={
                 <button
                   type='button'
                   onClick={() => setShowProfileModal(false)}
                   disabled={profileSaving}
-                  className='rounded-2xl bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-200 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40'
+                  aria-label='Close profile manager'
+                  className='cursor-pointer rounded-2xl bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-200 transition duration-200 hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-40'
                 >
                   ✕ Close
                 </button>
               }
-              bodyClassName='px-5 pb-5 pt-4 sm:px-7 sm:pb-7'
+              bodyClassName='px-5 pb-5 md:px-6 md:pb-6 pt-4 space-y-5'
             >
               <p className='mb-4 text-sm text-slate-400'>
                 Switch profiles, update names, and manage controllers.
